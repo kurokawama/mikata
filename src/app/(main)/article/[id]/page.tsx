@@ -8,8 +8,10 @@ import { SentimentGauge } from "@/components/sentiment/sentiment-gauge";
 import { createClient } from "@/lib/supabase/server";
 import { getProfile } from "@/lib/supabase/server";
 import { NewsArticleJsonLd } from "@/components/seo/json-ld";
+import { ArticlePerspectives } from "@/components/articles/article-perspectives";
+import { BookmarkButton } from "@/components/articles/bookmark-button";
 import type { Metadata } from "next";
-import type { ArticleWithSource } from "@/types/database";
+import type { ArticleWithSource, ArticlePerspectiveWithSource } from "@/types/database";
 
 export async function generateMetadata({
   params,
@@ -70,6 +72,14 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
 
   const typedArticle = article as ArticleWithSource;
 
+  // Fetch perspectives for this article
+  const { data: perspectives } = await supabase
+    .from("article_perspectives")
+    .select("*, media_sources(*)")
+    .eq("article_id", id);
+
+  const typedPerspectives = (perspectives ?? []) as ArticlePerspectiveWithSource[];
+
   // Check freemium limits
   const profile = await getProfile();
   const isSubscribed =
@@ -96,18 +106,35 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
       .eq("id", profile.id);
   }
 
+  // Check bookmark status
+  let isBookmarked = false;
+  if (profile) {
+    const { data: bookmark } = await supabase
+      .from("bookmarks")
+      .select("id")
+      .eq("user_id", profile.id)
+      .eq("article_id", id)
+      .single();
+    isBookmarked = !!bookmark;
+  }
+
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://mikata.news";
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-8 sm:px-6 lg:px-8">
       <NewsArticleJsonLd article={typedArticle} siteUrl={siteUrl} />
-      <Link
-        href="/"
-        className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-primary mb-6"
-      >
-        <ArrowLeft className="h-4 w-4" />
-        記事一覧に戻る
-      </Link>
+      <div className="flex items-center justify-between mb-6">
+        <Link
+          href="/"
+          className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-primary"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          記事一覧に戻る
+        </Link>
+        {profile && (
+          <BookmarkButton articleId={id} initialBookmarked={isBookmarked} />
+        )}
+      </div>
 
       <article>
         <header className="mb-8">
@@ -175,6 +202,8 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
             </div>
           </div>
         )}
+
+        {canView && <ArticlePerspectives perspectives={typedPerspectives} />}
 
         {typedArticle.media_sources?.url && (
           <div className="mt-8 border-t pt-6">
