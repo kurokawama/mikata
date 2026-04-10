@@ -3,27 +3,25 @@ import { Newsreader, Work_Sans, Montserrat } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/next'
 import './globals.css'
 
-const newsreader = Newsreader({ 
-  subsets: ["latin"],
+const newsreader = Newsreader({
+  subsets: ['latin'],
   variable: '--font-newsreader',
-  display: 'swap'
-});
-
-const workSans = Work_Sans({ 
-  subsets: ["latin"],
+  display: 'swap',
+})
+const workSans = Work_Sans({
+  subsets: ['latin'],
   variable: '--font-work-sans',
-  display: 'swap'
-});
-
-const montserrat = Montserrat({ 
-  subsets: ["latin"],
+  display: 'swap',
+})
+const montserrat = Montserrat({
+  subsets: ['latin'],
   variable: '--font-montserrat',
-  display: 'swap'
-});
+  display: 'swap',
+})
 
 export const metadata: Metadata = {
-  title: '国別の視点でニュースを探索 | MIKATAプレミアム',
-  description: '世界中の国の視点からニュースを探索し、多角的な情報を得られるプラットフォーム',
+  title: 'MIKATA（ミカタ）— 多視点ニュースアプリ | 世界のミカタ',
+  description: '複数の国・地域の視点から同じニュースを読む。世界の出来事をより深く、多角的に理解するためのニュースプラットフォーム。',
   generator: 'v0.app',
   icons: {
     icon: [
@@ -50,8 +48,8 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="ja" className={`${newsreader.variable} ${workSans.variable} ${montserrat.variable}`}>
-      <body className="font-sans antialiased bg-neutral-900 text-neutral-50">
+    <html lang="ja">
+      <body className={`${newsreader.variable} ${workSans.variable} ${montserrat.variable} font-sans antialiased`}>
         {children}
         {process.env.NODE_ENV === 'production' && <Analytics />}
       </body>

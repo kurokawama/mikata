@@ -4,81 +4,58 @@
 @custom-variant dark (&:is(.dark *));
 
 :root {
-  --background: #1a1a2e;
-  --foreground: #e8e8f0;
-  --card: #16213e;
-  --card-foreground: #e8e8f0;
-  --popover: #16213e;
-  --popover-foreground: #e8e8f0;
-  --primary: #f59e0b;
-  --primary-foreground: #1a1a2e;
-  --secondary: #22c55e;
-  --secondary-foreground: #1a1a2e;
-  --muted: #4b5563;
-  --muted-foreground: #9ca3af;
-  --accent: #f59e0b;
-  --accent-foreground: #1a1a2e;
-  --destructive: #ef4444;
-  --destructive-foreground: #ffffff;
-  --border: #4b5563;
-  --input: #16213e;
-  --ring: #f59e0b;
-  --chart-1: #f59e0b;
-  --chart-2: #22c55e;
-  --chart-3: #ef4444;
-  --chart-4: #d97706;
-  --chart-5: #fef3c7;
-  --radius: 0.625rem;
-  --sidebar: #1a1a2e;
-  --sidebar-foreground: #e8e8f0;
-  --sidebar-primary: #f59e0b;
-  --sidebar-primary-foreground: #1a1a2e;
-  --sidebar-accent: #f59e0b;
-  --sidebar-accent-foreground: #1a1a2e;
-  --sidebar-border: #4b5563;
-  --sidebar-ring: #f59e0b;
-}
+  /* MIKATA design tokens */
+  --nav-bg: #1A1A2E;
+  --nav-bg-deep: #16213E;
+  --surface-light: #E8E8F0;
+  --surface-white: #FFFFFF;
+  --accent: #F59E0B;
+  --accent-hover: #D97706;
+  --accent-muted: #FEF3C7;
+  --positive: #22C55E;
+  --negative: #EF4444;
+  --neutral-text: #9CA3AF;
+  --surface-off: #F8F9FA;
+  --border-light: #E5E7EB;
+  --text-secondary: #4B5563;
+  --border-muted: #D1D5DB;
+  --destructive-text: #DC2626;
 
-.dark {
-  --background: #1a1a2e;
-  --foreground: #e8e8f0;
-  --card: #16213e;
-  --card-foreground: #e8e8f0;
-  --popover: #16213e;
-  --popover-foreground: #e8e8f0;
-  --primary: #f59e0b;
-  --primary-foreground: #1a1a2e;
-  --secondary: #22c55e;
-  --secondary-foreground: #1a1a2e;
-  --muted: #4b5563;
-  --muted-foreground: #9ca3af;
-  --accent: #f59e0b;
-  --accent-foreground: #1a1a2e;
-  --destructive: #ef4444;
-  --destructive-foreground: #ffffff;
-  --border: #4b5563;
-  --input: #16213e;
-  --ring: #f59e0b;
-  --chart-1: #f59e0b;
-  --chart-2: #22c55e;
-  --chart-3: #ef4444;
-  --chart-4: #d97706;
-  --chart-5: #fef3c7;
-  --sidebar: #1a1a2e;
-  --sidebar-foreground: #e8e8f0;
-  --sidebar-primary: #f59e0b;
-  --sidebar-primary-foreground: #1a1a2e;
-  --sidebar-accent: #f59e0b;
-  --sidebar-accent-foreground: #1a1a2e;
-  --sidebar-border: #4b5563;
-  --sidebar-ring: #f59e0b;
+  --background: #F8F9FA;
+  --foreground: #1A1A2E;
+  --card: #FFFFFF;
+  --card-foreground: #1A1A2E;
+  --popover: #FFFFFF;
+  --popover-foreground: #1A1A2E;
+  --primary: #1A1A2E;
+  --primary-foreground: #FFFFFF;
+  --secondary: #E8E8F0;
+  --secondary-foreground: #1A1A2E;
+  --muted: #F8F9FA;
+  --muted-foreground: #9CA3AF;
+  --accent-color: #F59E0B;
+  --accent-foreground: #1A1A2E;
+  --destructive: #EF4444;
+  --destructive-foreground: #FFFFFF;
+  --border: #E5E7EB;
+  --input: #E5E7EB;
+  --ring: #F59E0B;
+  --radius: 0.75rem;
+  --sidebar: #1A1A2E;
+  --sidebar-foreground: #E8E8F0;
+  --sidebar-primary: #F59E0B;
+  --sidebar-primary-foreground: #1A1A2E;
+  --sidebar-accent: #16213E;
+  --sidebar-accent-foreground: #E8E8F0;
+  --sidebar-border: #16213E;
+  --sidebar-ring: #F59E0B;
 }
 
 @theme inline {
-  --font-sans: 'Work Sans', system-ui, sans-serif;
-  --font-newsreader: 'Newsreader', serif;
-  --font-montserrat: 'Montserrat', sans-serif;
-  --font-mono: 'Montserrat', monospace;
+  --font-sans: 'Work Sans', 'Work Sans Fallback', system-ui, sans-serif;
+  --font-serif: 'Newsreader', 'Newsreader Fallback', Georgia, serif;
+  --font-mono: 'Geist Mono', monospace;
+
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -91,18 +68,13 @@
   --color-secondary-foreground: var(--secondary-foreground);
   --color-muted: var(--muted);
   --color-muted-foreground: var(--muted-foreground);
-  --color-accent: var(--accent);
+  --color-accent: var(--accent-color);
   --color-accent-foreground: var(--accent-foreground);
   --color-destructive: var(--destructive);
   --color-destructive-foreground: var(--destructive-foreground);
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
-  --color-chart-1: var(--chart-1);
-  --color-chart-2: var(--chart-2);
-  --color-chart-3: var(--chart-3);
-  --color-chart-4: var(--chart-4);
-  --color-chart-5: var(--chart-5);
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
@@ -123,5 +95,6 @@
   }
   body {
     @apply bg-background text-foreground;
+    font-family: 'Work Sans', system-ui, sans-serif;
   }
 }
