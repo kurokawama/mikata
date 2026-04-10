@@ -1,0 +1,1555 @@
+{
+  "project": {
+    "name": "MIKATA",
+    "description": "AIが各国メディアの論調を分析し、独自解説+ソースリンクで多視点ニュースを日本語提供するPWA。ジャンル: スポーツ / 経済・マーケット / ゲーム・eスポーツ",
+    "created_at": "2026-04-09"
+  },
+
+  "actors": [
+    {
+      "id": "visitor",
+      "name": "visitor（未登録ユーザー）",
+      "type": "pre-auth",
+      "states": [
+        "初回訪問",
+        "記事一覧閲覧中",
+        "記事全文読もうとして登録前",
+        "パスワードリセット中"
+      ],
+      "flows": [
+        "トップ・ジャンルハブ閲覧",
+        "email_signup",
+        "email_login",
+        "password_reset"
+      ],
+      "canSelfRegister": true,
+      "authMethod": "email_signup（メール+パスワード）",
+      "note": "トップ・記事一覧・ソース一覧・視点ページは閲覧可。記事全文は読めない。1日1記事制限なし（登録前は全文ブロック）"
+    },
+    {
+      "id": "free_user",
+      "name": "free_user（メール登録済み）",
+      "type": "authenticated",
+      "states": [
+        "無料期間中（登録から90日以内）",
+        "無料期間終了（91日目以降）",
+        "課金検討中"
+      ],
+      "flows": [
+        "全記事閲覧（無料期間中）",
+        "1日1記事閲覧（無料期間終了後）",
+        "プッシュ通知受信",
+        "stripe_checkout（プレミアム申込）",
+        "設定変更",
+        "アカウント削除"
+      ],
+      "canSelfRegister": true,
+      "authMethod": "email_signup（メール+パスワード）→ 3ヶ月無料開始",
+      "note": "登録日から90日間は全記事無料。91日目以降は1日1記事のみ。毎朝8時プッシュ通知で習慣化"
+    },
+    {
+      "id": "premium_user",
+      "name": "premium_user（月額課金）",
+      "type": "authenticated",
+      "states": [
+        "アクティブ課金中",
+        "解約手続き中",
+        "解約済み（free_userにダウングレード）"
+      ],
+      "flows": [
+        "全記事読み放題",
+        "広告非表示",
+        "先行配信記事閲覧（有料7時配信）",
+        "stripe_portal（プラン変更・解約）",
+        "設定変更",
+        "アカウント削除"
+      ],
+      "canSelfRegister": false,
+      "authMethod": "free_userがStripe Checkoutで課金→premium_userにアップグレード",
+      "note": "月980円 or 年9,800円。全記事読み放題、広告非表示、有料先行配信（7時）。解約後はfree_userにダウングレード（残日数なし）"
+    },
+    {
+      "id": "admin",
+      "name": "admin（黒川CEO）",
+      "type": "admin",
+      "states": [
+        "通常運用中"
+      ],
+      "flows": [
+        "記事承認・編集・削除",
+        "広告審査・承認",
+        "ソース管理",
+        "ユーザー管理",
+        "LINEで5秒承認（広告）"
+      ],
+      "canSelfRegister": false,
+      "authMethod": "招待制（email_login のみ。自己登録不可）",
+      "note": "システムで1名のみ。記事・広告の最終承認権限を持つ。LINE Bot経由の5秒承認対応"
+    }
+  ],
+
+  "roles": [
+    {
+      "id": "visitor",
+      "name": "visitor",
+      "description": "未登録ユーザー",
+      "auth_level": "anon",
+      "test_account": { "email": null, "note": "Supabase anon key でアクセス" }
+    },
+    {
+      "id": "free_user",
+      "name": "free_user",
+      "description": "メール登録済み無料ユーザー",
+      "auth_level": "free_user",
+      "test_account": { "email": "free@test.com", "note": "登録90日以内テスト用と91日目以降テスト用の2アカウントが必要" }
+    },
+    {
+      "id": "premium_user",
+      "name": "premium_user",
+      "description": "月額課金ユーザー",
+      "auth_level": "premium_user",
+      "test_account": { "email": "premium@test.com", "note": "Stripe test mode で課金済みアカウント" }
+    },
+    {
+      "id": "admin",
+      "name": "admin",
+      "description": "黒川CEO。全権限",
+      "auth_level": "admin",
+      "test_account": { "email": "admin@mikata.news", "note": "本番専用。テスト環境では admin-test@mikata.news" }
+    }
+  ],
+
+  "authFlows": {
+    "description": "認証関連フロー（全4種）",
+    "required": true,
+    "flows": {
+      "email_signup": {
+        "required": true,
+        "actors": ["visitor"],
+        "description": "メール+パスワードで新規登録 → 3ヶ月無料期間開始",
+        "steps": [
+          { "order": 1, "page": "/auth/signup", "action": "メールアドレス・パスワード・パスワード確認を入力", "result": "Supabase Auth でアカウント作成。確認メール送信" },
+          { "order": 2, "page": "/auth/callback", "action": "確認メールのリンクをクリック", "result": "メール確認完了。profilesテーブルにrole=free_user / trial_started_at=NOW() を記録" },
+          { "order": 3, "page": "/", "action": "登録完了。トップページへリダイレクト", "result": "free_userとしてログイン済み。無料期間開始" }
+        ]
+      },
+      "email_login": {
+        "required": true,
+        "actors": ["free_user", "premium_user", "admin"],
+        "description": "メール+パスワードでログイン",
+        "steps": [
+          { "order": 1, "page": "/auth/login", "action": "メールアドレス・パスワードを入力して「ログイン」ボタン押下", "result": "Supabase Auth でセッション作成" },
+          { "order": 2, "page": "/auth/callback", "action": "セッション確立後にリダイレクト", "result": "ロール判定: admin → /admin、それ以外 → /" }
+        ]
+      },
+      "password_reset": {
+        "required": true,
+        "actors": ["visitor", "free_user", "premium_user"],
+        "description": "パスワードを忘れた場合のリセットフロー",
+        "steps": [
+          { "order": 1, "page": "/auth/reset-password", "action": "メールアドレスを入力して「リセットリンク送信」ボタン押下", "result": "パスワードリセット用メールを送信" },
+          { "order": 2, "page": "/auth/callback", "action": "メール内リンクをクリック", "result": "新パスワード入力フォームを表示" },
+          { "order": 3, "page": "/auth/reset-password", "action": "新パスワード・確認パスワードを入力して「変更」ボタン押下", "result": "パスワード更新完了。ログイン画面へリダイレクト" }
+        ]
+      },
+      "stripe_checkout": {
+        "required": true,
+        "actors": ["free_user"],
+        "description": "プレミアムプランへの課金申込",
+        "steps": [
+          { "order": 1, "page": "/subscribe", "action": "「月額980円」または「年額9,800円」プランを選択して「プランを始める」ボタン押下", "result": "Stripe Checkout Session 作成。Stripeホスト型決済ページへリダイレクト" },
+          { "order": 2, "page": "Stripe Checkout（外部）", "action": "カード情報を入力して決済完了", "result": "Stripe Webhook → profilesテーブルのrole=premium_user に更新。stripe_customer_id / stripe_subscription_id を保存" },
+          { "order": 3, "page": "/", "action": "決済成功後のリダイレクト", "result": "premium_userとしてトップページに戻る。「プレミアムプランを開始しました」トーストを表示" }
+        ]
+      },
+      "stripe_portal": {
+        "required": true,
+        "actors": ["premium_user"],
+        "description": "プラン変更・解約",
+        "steps": [
+          { "order": 1, "page": "/settings/account", "action": "「プラン管理・解約」ボタン押下", "result": "Stripe Customer Portal Session 作成。Stripeホスト型管理ページへリダイレクト" },
+          { "order": 2, "page": "Stripe Customer Portal（外部）", "action": "解約 or プラン変更を操作", "result": "Stripe Webhook → 解約の場合: profilesテーブルのrole=free_user に更新（請求期間末日付け）" }
+        ]
+      },
+      "logout": {
+        "required": true,
+        "actors": ["free_user", "premium_user", "admin"],
+        "description": "ログアウト",
+        "steps": [
+          { "order": 1, "action": "ヘッダーのユーザーメニュー or 設定画面から「ログアウト」ボタン押下", "result": "Supabase セッション破棄。/ へリダイレクト" }
+        ]
+      }
+    }
+  },
+
+  "pages": [
+    {
+      "id": "page_top",
+      "path": "/",
+      "name": "トップページ",
+      "layout_group": "(root)",
+      "public": true,
+      "requires_auth": false,
+      "allowed_roles": ["visitor", "free_user", "premium_user", "admin"],
+      "seo": {
+        "title": "MIKATA — 多視点ニュース",
+        "description": "AIが各国メディアの論調を分析。スポーツ・経済・ゲームを多角的に解説",
+        "json_ld": ["WebSite", "Organization"]
+      },
+      "components": {
+        "buttons": [
+          {
+            "id": "btn_top_signup",
+            "label": "無料で読む（3ヶ月）",
+            "action": "新規登録ページへ遷移",
+            "action_type": "navigation",
+            "target": "/auth/signup",
+            "expected_result": "新規登録ページ表示",
+            "visible_to": ["visitor"]
+          },
+          {
+            "id": "btn_top_login",
+            "label": "ログイン",
+            "action": "ログインページへ遷移",
+            "action_type": "navigation",
+            "target": "/auth/login",
+            "expected_result": "ログインページ表示",
+            "visible_to": ["visitor"]
+          }
+        ],
+        "links": [
+          { "id": "link_top_sports", "label": "スポーツ", "destination": "/sports/", "type": "navigation" },
+          { "id": "link_top_soccer", "label": "サッカー", "destination": "/sports/soccer/", "type": "navigation" },
+          { "id": "link_top_economy", "label": "経済・マーケット", "destination": "/economy/", "type": "navigation" },
+          { "id": "link_top_gaming", "label": "ゲーム・eスポーツ", "destination": "/gaming/", "type": "navigation" },
+          { "id": "link_top_perspectives", "label": "国別視点", "destination": "/perspectives/", "type": "navigation" },
+          { "id": "link_top_article_card", "label": "記事カード（各ジャンル）", "destination": "/sports/soccer/[slug] | /economy/[sub]/[slug] | /gaming/[sub]/[slug]", "type": "table_row" }
+        ],
+        "forms": [],
+        "data_displays": [
+          { "id": "data_hero_article", "type": "card", "data_source": "getHeroArticle()", "description": "ヒーロー記事（最新の注目記事1件。premium_userには7時公開分も含む）" },
+          { "id": "data_tab_sports", "type": "card", "data_source": "getArticlesByGenre('sports', limit=6)", "description": "スポーツタブ: 最新6件カードリスト。無料期間外free_userには1日1記事制限バッジを表示" },
+          { "id": "data_tab_economy", "type": "card", "data_source": "getArticlesByGenre('economy', limit=6)", "description": "経済・マーケットタブ: 最新6件カードリスト" },
+          { "id": "data_tab_gaming", "type": "card", "data_source": "getArticlesByGenre('gaming', limit=6)", "description": "ゲーム・eスポーツタブ: 最新6件カードリスト" }
+        ]
+      }
+    },
+    {
+      "id": "page_sports_hub",
+      "path": "/sports/",
+      "name": "スポーツハブ",
+      "layout_group": "(content)",
+      "public": true,
+      "requires_auth": false,
+      "allowed_roles": ["visitor", "free_user", "premium_user", "admin"],
+      "seo": {
+        "title": "スポーツニュース多視点解説 | MIKATA",
+        "json_ld": ["CollectionPage", "BreadcrumbList"]
+      },
+      "components": {
+        "buttons": [],
+        "links": [
+          { "id": "link_sports_soccer", "label": "サッカー", "destination": "/sports/soccer/", "type": "navigation" },
+          { "id": "link_sports_article", "label": "記事カード", "destination": "/sports/soccer/[slug]", "type": "table_row" }
+        ],
+        "forms": [],
+        "data_displays": [
+          { "id": "data_sports_list", "type": "card", "data_source": "getArticlesByGenre('sports', limit=20)", "description": "スポーツ全カテゴリ最新記事リスト。ページネーション20件/ページ" }
+        ]
+      }
+    },
+    {
+      "id": "page_soccer_hub",
+      "path": "/sports/soccer/",
+      "name": "サッカーハブ",
+      "layout_group": "(content)",
+      "public": true,
+      "requires_auth": false,
+      "allowed_roles": ["visitor", "free_user", "premium_user", "admin"],
+      "seo": {
+        "title": "サッカーニュース多視点解説 | MIKATA",
+        "json_ld": ["CollectionPage", "BreadcrumbList"]
+      },
+      "components": {
+        "buttons": [],
+        "links": [
+          { "id": "link_soccer_article", "label": "記事カード", "destination": "/sports/soccer/[slug]", "type": "table_row" }
+        ],
+        "forms": [],
+        "data_displays": [
+          { "id": "data_soccer_list", "type": "card", "data_source": "getArticlesByCategory('soccer', limit=20)", "description": "サッカー最新記事リスト" }
+        ]
+      }
+    },
+    {
+      "id": "page_economy_hub",
+      "path": "/economy/",
+      "name": "経済・マーケットハブ",
+      "layout_group": "(content)",
+      "public": true,
+      "requires_auth": false,
+      "allowed_roles": ["visitor", "free_user", "premium_user", "admin"],
+      "seo": {
+        "title": "経済・マーケットニュース多視点解説 | MIKATA",
+        "json_ld": ["CollectionPage", "BreadcrumbList"]
+      },
+      "components": {
+        "buttons": [],
+        "links": [
+          { "id": "link_economy_article", "label": "記事カード", "destination": "/economy/[sub]/[slug]", "type": "table_row" }
+        ],
+        "forms": [],
+        "data_displays": [
+          { "id": "data_economy_list", "type": "card", "data_source": "getArticlesByGenre('economy', limit=20)", "description": "経済・マーケット最新記事リスト。サブカテゴリ（株式・為替・仮想通貨・企業）タブあり" }
+        ]
+      }
+    },
+    {
+      "id": "page_gaming_hub",
+      "path": "/gaming/",
+      "name": "ゲーム・eスポーツハブ",
+      "layout_group": "(content)",
+      "public": true,
+      "requires_auth": false,
+      "allowed_roles": ["visitor", "free_user", "premium_user", "admin"],
+      "seo": {
+        "title": "ゲーム・eスポーツニュース多視点解説 | MIKATA",
+        "json_ld": ["CollectionPage", "BreadcrumbList"]
+      },
+      "components": {
+        "buttons": [],
+        "links": [
+          { "id": "link_gaming_article", "label": "記事カード", "destination": "/gaming/[sub]/[slug]", "type": "table_row" }
+        ],
+        "forms": [],
+        "data_displays": [
+          { "id": "data_gaming_list", "type": "card", "data_source": "getArticlesByGenre('gaming', limit=20)", "description": "ゲーム・eスポーツ最新記事リスト" }
+        ]
+      }
+    },
+    {
+      "id": "page_perspectives",
+      "path": "/perspectives/",
+      "name": "国別視点ブラウズ",
+      "layout_group": "(content)",
+      "public": true,
+      "requires_auth": false,
+      "allowed_roles": ["visitor", "free_user", "premium_user", "admin"],
+      "seo": {
+        "title": "各国メディアの視点 | MIKATA",
+        "json_ld": ["CollectionPage"]
+      },
+      "components": {
+        "buttons": [],
+        "links": [
+          { "id": "link_country_page", "label": "国旗+国名カード", "destination": "/perspectives/[country]/", "type": "table_row" }
+        ],
+        "forms": [],
+        "data_displays": [
+          { "id": "data_country_list", "type": "card", "data_source": "getCountries()", "description": "対応国一覧カードグリッド（国旗・国名・記事数）" }
+        ]
+      }
+    },
+    {
+      "id": "page_country_detail",
+      "path": "/perspectives/[country]/",
+      "name": "国別メディア視点まとめ",
+      "layout_group": "(content)",
+      "public": true,
+      "requires_auth": false,
+      "allowed_roles": ["visitor", "free_user", "premium_user", "admin"],
+      "seo": {
+        "title": "[国名]メディアの視点 | MIKATA",
+        "json_ld": ["CollectionPage", "BreadcrumbList"]
+      },
+      "components": {
+        "buttons": [],
+        "links": [
+          { "id": "link_country_article", "label": "記事カード", "destination": "各ジャンルの記事詳細ページ", "type": "table_row" }
+        ],
+        "forms": [],
+        "data_displays": [
+          { "id": "data_country_articles", "type": "card", "data_source": "getArticlesByCountry(country, limit=20)", "description": "指定国のメディアが引用された記事リスト。論調ラベル（肯定/批判/中立）バッジ表示" }
+        ]
+      }
+    },
+    {
+      "id": "page_sources",
+      "path": "/sources/",
+      "name": "引用メディア一覧",
+      "layout_group": "(content)",
+      "public": true,
+      "requires_auth": false,
+      "allowed_roles": ["visitor", "free_user", "premium_user", "admin"],
+      "seo": {
+        "title": "引用メディア一覧 | MIKATA",
+        "json_ld": ["CollectionPage"]
+      },
+      "components": {
+        "buttons": [],
+        "links": [
+          { "id": "link_source_detail", "label": "メディアカード", "destination": "/sources/[media-slug]/", "type": "table_row" }
+        ],
+        "forms": [],
+        "data_displays": [
+          { "id": "data_sources_list", "type": "card", "data_source": "getMediaSources()", "description": "引用メディア一覧（メディア名・国・ジャンル・記事引用数）" }
+        ]
+      }
+    },
+    {
+      "id": "page_source_detail",
+      "path": "/sources/[media-slug]/",
+      "name": "メディア解説ページ",
+      "layout_group": "(content)",
+      "public": true,
+      "requires_auth": false,
+      "allowed_roles": ["visitor", "free_user", "premium_user", "admin"],
+      "seo": {
+        "title": "[メディア名]について | MIKATA",
+        "json_ld": ["Article", "Organization", "BreadcrumbList"]
+      },
+      "components": {
+        "buttons": [],
+        "links": [
+          { "id": "link_source_articles", "label": "このメディアを引用した記事", "destination": "各記事詳細ページ", "type": "table_row" }
+        ],
+        "forms": [],
+        "data_displays": [
+          { "id": "data_source_info", "type": "card", "data_source": "getMediaSource(slug)", "description": "メディア概要（国・言語・政治的傾向・信頼性スコア・説明文）" },
+          { "id": "data_source_articles", "type": "card", "data_source": "getArticlesBySource(slug, limit=10)", "description": "このメディアを引用した最新10件" }
+        ]
+      }
+    },
+    {
+      "id": "page_about",
+      "path": "/about",
+      "name": "サービス紹介・運営者情報",
+      "layout_group": "(static)",
+      "public": true,
+      "requires_auth": false,
+      "allowed_roles": ["visitor", "free_user", "premium_user", "admin"],
+      "seo": {
+        "title": "MIKATAについて | 運営者情報",
+        "json_ld": ["AboutPage", "Organization", "Person"]
+      },
+      "components": {
+        "buttons": [
+          {
+            "id": "btn_about_signup",
+            "label": "無料で始める",
+            "action": "新規登録ページへ遷移",
+            "action_type": "navigation",
+            "target": "/auth/signup",
+            "expected_result": "新規登録ページ表示",
+            "visible_to": ["visitor"]
+          }
+        ],
+        "links": [],
+        "forms": [],
+        "data_displays": [
+          { "id": "data_about_content", "type": "card", "data_source": "static content", "description": "サービス理念・AIの説明・運営者プロフィール（黒川CEO）・編集方針リンク" }
+        ]
+      }
+    },
+    {
+      "id": "page_terms",
+      "path": "/legal/terms",
+      "name": "利用規約",
+      "layout_group": "(legal)",
+      "public": true,
+      "requires_auth": false,
+      "allowed_roles": ["visitor", "free_user", "premium_user", "admin"],
+      "seo": { "title": "利用規約 | MIKATA" },
+      "components": { "buttons": [], "links": [], "forms": [], "data_displays": [] }
+    },
+    {
+      "id": "page_privacy",
+      "path": "/legal/privacy",
+      "name": "プライバシーポリシー",
+      "layout_group": "(legal)",
+      "public": true,
+      "requires_auth": false,
+      "allowed_roles": ["visitor", "free_user", "premium_user", "admin"],
+      "seo": { "title": "プライバシーポリシー | MIKATA" },
+      "components": { "buttons": [], "links": [], "forms": [], "data_displays": [] }
+    },
+    {
+      "id": "page_tokushoho",
+      "path": "/legal/tokushoho",
+      "name": "特商法表記",
+      "layout_group": "(legal)",
+      "public": true,
+      "requires_auth": false,
+      "allowed_roles": ["visitor", "free_user", "premium_user", "admin"],
+      "seo": { "title": "特定商取引法に基づく表記 | MIKATA" },
+      "components": { "buttons": [], "links": [], "forms": [], "data_displays": [] }
+    },
+    {
+      "id": "page_editorial_policy",
+      "path": "/legal/editorial-policy",
+      "name": "編集方針",
+      "layout_group": "(legal)",
+      "public": true,
+      "requires_auth": false,
+      "allowed_roles": ["visitor", "free_user", "premium_user", "admin"],
+      "seo": { "title": "編集方針 | MIKATA" },
+      "components": { "buttons": [], "links": [], "forms": [], "data_displays": [] }
+    },
+    {
+      "id": "page_auth_signup",
+      "path": "/auth/signup",
+      "name": "新規登録",
+      "layout_group": "(auth)",
+      "public": true,
+      "requires_auth": false,
+      "allowed_roles": ["visitor"],
+      "components": {
+        "buttons": [
+          {
+            "id": "btn_signup_submit",
+            "label": "無料で登録する",
+            "action": "アカウント作成",
+            "action_type": "server_action",
+            "target": "signUp(email, password)",
+            "expected_result": "確認メール送信。「確認メールを送信しました」メッセージを表示"
+          }
+        ],
+        "links": [
+          { "id": "link_signup_login", "label": "すでにアカウントをお持ちの方", "destination": "/auth/login", "type": "navigation" },
+          { "id": "link_signup_terms", "label": "利用規約", "destination": "/legal/terms", "type": "navigation" },
+          { "id": "link_signup_privacy", "label": "プライバシーポリシー", "destination": "/legal/privacy", "type": "navigation" }
+        ],
+        "forms": [
+          {
+            "id": "form_signup",
+            "name": "新規登録フォーム",
+            "action": "signUp",
+            "fields": ["email", "password", "password_confirm"],
+            "submit_button": "btn_signup_submit",
+            "validation": "メール形式必須。パスワード8文字以上・英数字混合。パスワード一致確認。利用規約同意チェックボックス必須"
+          }
+        ],
+        "data_displays": []
+      }
+    },
+    {
+      "id": "page_auth_login",
+      "path": "/auth/login",
+      "name": "ログイン",
+      "layout_group": "(auth)",
+      "public": true,
+      "requires_auth": false,
+      "allowed_roles": ["visitor"],
+      "components": {
+        "buttons": [
+          {
+            "id": "btn_login_submit",
+            "label": "ログイン",
+            "action": "メール+パスワード認証",
+            "action_type": "server_action",
+            "target": "signIn(email, password)",
+            "expected_result": "認証成功: ロール判定後にリダイレクト（admin → /admin、その他 → /）。失敗: 「メールアドレスまたはパスワードが正しくありません」エラー表示"
+          }
+        ],
+        "links": [
+          { "id": "link_login_signup", "label": "アカウント作成", "destination": "/auth/signup", "type": "navigation" },
+          { "id": "link_login_reset", "label": "パスワードを忘れた方", "destination": "/auth/reset-password", "type": "navigation" }
+        ],
+        "forms": [
+          {
+            "id": "form_login",
+            "name": "ログインフォーム",
+            "action": "signIn",
+            "fields": ["email", "password"],
+            "submit_button": "btn_login_submit",
+            "validation": "メール形式必須。パスワード必須"
+          }
+        ],
+        "data_displays": []
+      }
+    },
+    {
+      "id": "page_auth_reset",
+      "path": "/auth/reset-password",
+      "name": "パスワードリセット",
+      "layout_group": "(auth)",
+      "public": true,
+      "requires_auth": false,
+      "allowed_roles": ["visitor", "free_user", "premium_user"],
+      "components": {
+        "buttons": [
+          {
+            "id": "btn_reset_send",
+            "label": "リセットリンクを送信",
+            "action": "パスワードリセットメール送信",
+            "action_type": "server_action",
+            "target": "resetPassword(email)",
+            "expected_result": "「リセットリンクを送信しました」メッセージ表示。存在しないメールでも同一メッセージ（列挙攻撃対策）"
+          },
+          {
+            "id": "btn_reset_update",
+            "label": "パスワードを変更する",
+            "action": "新パスワード保存（リセットリンクからのアクセス時のみ表示）",
+            "action_type": "server_action",
+            "target": "updatePassword(newPassword)",
+            "expected_result": "パスワード更新完了。/auth/login へリダイレクト"
+          }
+        ],
+        "links": [
+          { "id": "link_reset_login", "label": "ログインに戻る", "destination": "/auth/login", "type": "navigation" }
+        ],
+        "forms": [
+          {
+            "id": "form_reset_email",
+            "name": "パスワードリセット申請フォーム",
+            "action": "resetPassword",
+            "fields": ["email"],
+            "submit_button": "btn_reset_send",
+            "validation": "メール形式必須"
+          },
+          {
+            "id": "form_reset_new_password",
+            "name": "新パスワード設定フォーム（コールバック後のみ表示）",
+            "action": "updatePassword",
+            "fields": ["new_password", "new_password_confirm"],
+            "submit_button": "btn_reset_update",
+            "validation": "パスワード8文字以上・英数字混合。一致確認"
+          }
+        ],
+        "data_displays": []
+      }
+    },
+    {
+      "id": "page_auth_callback",
+      "path": "/auth/callback",
+      "name": "OAuth/メール確認コールバック",
+      "layout_group": "(auth)",
+      "public": true,
+      "requires_auth": false,
+      "allowed_roles": ["visitor", "free_user", "premium_user", "admin"],
+      "components": {
+        "buttons": [],
+        "links": [],
+        "forms": [],
+        "data_displays": [
+          { "id": "data_callback_processing", "type": "card", "data_source": "Supabase Auth callback", "description": "コールバック処理中スピナー。code/token検証後に適切なページへリダイレクト" }
+        ]
+      }
+    },
+    {
+      "id": "page_article_sports",
+      "path": "/sports/soccer/[slug]",
+      "name": "記事詳細（スポーツ）",
+      "layout_group": "(article)",
+      "public": false,
+      "requires_auth": false,
+      "allowed_roles": ["visitor", "free_user", "premium_user", "admin"],
+      "access_control": {
+        "visitor": "全文ブロック。冒頭300字プレビュー+登録CTAを表示",
+        "free_user_in_trial": "全文閲覧可",
+        "free_user_post_trial": "当日1記事目のみ全文閲覧可。2記事目以降は冒頭300字+課金CTAを表示",
+        "premium_user": "全文閲覧可。広告非表示",
+        "admin": "全文閲覧可"
+      },
+      "seo": {
+        "title": "[記事タイトル] | MIKATA",
+        "json_ld": ["Article", "NewsArticle", "BreadcrumbList"]
+      },
+      "components": {
+        "buttons": [
+          {
+            "id": "btn_article_signup_cta",
+            "label": "無料登録して続きを読む（3ヶ月無料）",
+            "action": "新規登録ページへ遷移",
+            "action_type": "navigation",
+            "target": "/auth/signup",
+            "expected_result": "新規登録ページ表示",
+            "visible_to": ["visitor"]
+          },
+          {
+            "id": "btn_article_premium_cta",
+            "label": "プレミアムプランに登録して全記事読む",
+            "action": "課金ページへ遷移",
+            "action_type": "navigation",
+            "target": "/subscribe",
+            "expected_result": "課金ページ表示",
+            "visible_to": ["free_user（無料期間終了後）"]
+          }
+        ],
+        "links": [
+          { "id": "link_article_source", "label": "ソースリンク（各国メディアURL）", "destination": "外部メディアURL", "type": "navigation" },
+          { "id": "link_article_country", "label": "国別視点タグ", "destination": "/perspectives/[country]/", "type": "navigation" },
+          { "id": "link_article_genre", "label": "ジャンルパンくず", "destination": "/sports/ or /sports/soccer/", "type": "breadcrumb" }
+        ],
+        "forms": [],
+        "data_displays": [
+          { "id": "data_article_body", "type": "card", "data_source": "getArticle(slug)", "description": "AI生成独自解説（800-1200字）。論調ラベル付きソース引用ブロック（肯定/批判/中立）。各国メディア視点サマリー" },
+          { "id": "data_article_sources", "type": "card", "data_source": "getArticleSources(slug)", "description": "引用ソース一覧（メディア名・国・論調ラベル・リンク）" },
+          { "id": "data_article_related", "type": "card", "data_source": "getRelatedArticles(slug, limit=3)", "description": "関連記事3件" },
+          { "id": "data_article_ads", "type": "card", "data_source": "getAdsForArticle(genre, country)", "description": "広告表示エリア（premium_userには非表示）" }
+        ]
+      }
+    },
+    {
+      "id": "page_article_economy",
+      "path": "/economy/[sub]/[slug]",
+      "name": "記事詳細（経済・マーケット）",
+      "layout_group": "(article)",
+      "public": false,
+      "requires_auth": false,
+      "allowed_roles": ["visitor", "free_user", "premium_user", "admin"],
+      "access_control": {
+        "visitor": "全文ブロック。冒頭300字プレビュー+登録CTAを表示",
+        "free_user_in_trial": "全文閲覧可",
+        "free_user_post_trial": "当日1記事目のみ全文閲覧可。2記事目以降は冒頭300字+課金CTAを表示",
+        "premium_user": "全文閲覧可。広告非表示",
+        "admin": "全文閲覧可"
+      },
+      "seo": { "title": "[記事タイトル] | MIKATA", "json_ld": ["Article", "NewsArticle", "BreadcrumbList"] },
+      "components": {
+        "buttons": [
+          { "id": "btn_economy_signup_cta", "label": "無料登録して続きを読む（3ヶ月無料）", "action": "新規登録ページへ遷移", "action_type": "navigation", "target": "/auth/signup", "expected_result": "新規登録ページ表示", "visible_to": ["visitor"] },
+          { "id": "btn_economy_premium_cta", "label": "プレミアムプランに登録して全記事読む", "action": "課金ページへ遷移", "action_type": "navigation", "target": "/subscribe", "expected_result": "課金ページ表示", "visible_to": ["free_user（無料期間終了後）"] }
+        ],
+        "links": [
+          { "id": "link_economy_source", "label": "ソースリンク", "destination": "外部メディアURL", "type": "navigation" },
+          { "id": "link_economy_breadcrumb", "label": "パンくずリスト", "destination": "/economy/", "type": "breadcrumb" }
+        ],
+        "forms": [],
+        "data_displays": [
+          { "id": "data_economy_body", "type": "card", "data_source": "getArticle(slug)", "description": "AI生成独自解説。論調ラベル付きソース引用ブロック" },
+          { "id": "data_economy_ads", "type": "card", "data_source": "getAdsForArticle('economy', ...)", "description": "広告表示エリア（premium_userには非表示）" }
+        ]
+      }
+    },
+    {
+      "id": "page_article_gaming",
+      "path": "/gaming/[sub]/[slug]",
+      "name": "記事詳細（ゲーム・eスポーツ）",
+      "layout_group": "(article)",
+      "public": false,
+      "requires_auth": false,
+      "allowed_roles": ["visitor", "free_user", "premium_user", "admin"],
+      "access_control": {
+        "visitor": "全文ブロック。冒頭300字プレビュー+登録CTAを表示",
+        "free_user_in_trial": "全文閲覧可",
+        "free_user_post_trial": "当日1記事目のみ全文閲覧可。2記事目以降は冒頭300字+課金CTAを表示",
+        "premium_user": "全文閲覧可。広告非表示",
+        "admin": "全文閲覧可"
+      },
+      "seo": { "title": "[記事タイトル] | MIKATA", "json_ld": ["Article", "NewsArticle", "BreadcrumbList"] },
+      "components": {
+        "buttons": [
+          { "id": "btn_gaming_signup_cta", "label": "無料登録して続きを読む（3ヶ月無料）", "action": "新規登録ページへ遷移", "action_type": "navigation", "target": "/auth/signup", "expected_result": "新規登録ページ表示", "visible_to": ["visitor"] },
+          { "id": "btn_gaming_premium_cta", "label": "プレミアムプランに登録して全記事読む", "action": "課金ページへ遷移", "action_type": "navigation", "target": "/subscribe", "expected_result": "課金ページ表示", "visible_to": ["free_user（無料期間終了後）"] }
+        ],
+        "links": [
+          { "id": "link_gaming_source", "label": "ソースリンク", "destination": "外部メディアURL", "type": "navigation" },
+          { "id": "link_gaming_breadcrumb", "label": "パンくずリスト", "destination": "/gaming/", "type": "breadcrumb" }
+        ],
+        "forms": [],
+        "data_displays": [
+          { "id": "data_gaming_body", "type": "card", "data_source": "getArticle(slug)", "description": "AI生成独自解説。論調ラベル付きソース引用ブロック" },
+          { "id": "data_gaming_ads", "type": "card", "data_source": "getAdsForArticle('gaming', ...)", "description": "広告表示エリア（premium_userには非表示）" }
+        ]
+      }
+    },
+    {
+      "id": "page_subscribe",
+      "path": "/subscribe",
+      "name": "課金ページ（プラン選択）",
+      "layout_group": "(member)",
+      "public": false,
+      "requires_auth": true,
+      "allowed_roles": ["free_user"],
+      "note": "premium_userがアクセスした場合は/settings/accountへリダイレクト",
+      "components": {
+        "buttons": [
+          {
+            "id": "btn_subscribe_monthly",
+            "label": "月額プランを始める（¥980/月）",
+            "action": "Stripe Checkout Session 作成（月額）",
+            "action_type": "server_action",
+            "target": "createCheckoutSession(plan='monthly')",
+            "expected_result": "Stripe Checkoutページへリダイレクト"
+          },
+          {
+            "id": "btn_subscribe_yearly",
+            "label": "年額プランを始める（¥9,800/年・2ヶ月分お得）",
+            "action": "Stripe Checkout Session 作成（年額）",
+            "action_type": "server_action",
+            "target": "createCheckoutSession(plan='yearly')",
+            "expected_result": "Stripe Checkoutページへリダイレクト"
+          }
+        ],
+        "links": [
+          { "id": "link_subscribe_terms", "label": "利用規約", "destination": "/legal/terms", "type": "navigation" },
+          { "id": "link_subscribe_tokushoho", "label": "特商法表記", "destination": "/legal/tokushoho", "type": "navigation" }
+        ],
+        "forms": [],
+        "data_displays": [
+          { "id": "data_plan_comparison", "type": "card", "data_source": "static content", "description": "無料 vs プレミアムの機能比較テーブル。残り無料期間日数を表示（trial中のfree_userの場合）" }
+        ]
+      }
+    },
+    {
+      "id": "page_settings",
+      "path": "/settings",
+      "name": "設定（通知・ジャンル・プッシュ）",
+      "layout_group": "(member)",
+      "public": false,
+      "requires_auth": true,
+      "allowed_roles": ["free_user", "premium_user"],
+      "components": {
+        "buttons": [
+          {
+            "id": "btn_settings_save",
+            "label": "設定を保存",
+            "action": "通知・ジャンル設定を保存",
+            "action_type": "server_action",
+            "target": "updateUserSettings(userId, settings)",
+            "expected_result": "「保存しました」トーストを表示"
+          }
+        ],
+        "links": [
+          { "id": "link_settings_account", "label": "アカウント管理", "destination": "/settings/account", "type": "navigation" }
+        ],
+        "forms": [
+          {
+            "id": "form_settings",
+            "name": "設定フォーム",
+            "action": "updateUserSettings",
+            "fields": ["notification_email_enabled", "notification_push_enabled", "genre_sports", "genre_economy", "genre_gaming", "push_time_preference"],
+            "submit_button": "btn_settings_save",
+            "validation": "ジャンルは最低1つ選択必須"
+          }
+        ],
+        "data_displays": [
+          { "id": "data_settings_current", "type": "card", "data_source": "getUserSettings(userId)", "description": "現在の設定値を表示" }
+        ]
+      }
+    },
+    {
+      "id": "page_settings_account",
+      "path": "/settings/account",
+      "name": "アカウント管理",
+      "layout_group": "(member)",
+      "public": false,
+      "requires_auth": true,
+      "allowed_roles": ["free_user", "premium_user"],
+      "components": {
+        "buttons": [
+          {
+            "id": "btn_account_change_password",
+            "label": "パスワードを変更",
+            "action": "パスワード変更メールを送信",
+            "action_type": "server_action",
+            "target": "sendPasswordResetEmail(userEmail)",
+            "expected_result": "「変更リンクをメールに送信しました」メッセージ表示"
+          },
+          {
+            "id": "btn_account_manage_plan",
+            "label": "プラン管理・解約",
+            "action": "Stripe Customer Portal へ遷移",
+            "action_type": "server_action",
+            "target": "createCustomerPortalSession(stripeCustomerId)",
+            "expected_result": "Stripe Customer Portalへリダイレクト",
+            "visible_to": ["premium_user"]
+          },
+          {
+            "id": "btn_account_upgrade",
+            "label": "プレミアムプランへアップグレード",
+            "action": "課金ページへ遷移",
+            "action_type": "navigation",
+            "target": "/subscribe",
+            "expected_result": "課金ページ表示",
+            "visible_to": ["free_user"]
+          },
+          {
+            "id": "btn_account_delete",
+            "label": "アカウントを削除する",
+            "action": "削除確認ダイアログ表示",
+            "action_type": "modal",
+            "target": "AlertDialog（「本当に削除しますか？この操作は取り消せません」）",
+            "expected_result": "確認後にアカウント削除実行。Stripeサブスク即時解約。Supabase Authユーザー削除。/ へリダイレクト"
+          }
+        ],
+        "links": [
+          { "id": "link_account_settings", "label": "通知・ジャンル設定へ戻る", "destination": "/settings", "type": "navigation" }
+        ],
+        "forms": [],
+        "data_displays": [
+          { "id": "data_account_info", "type": "card", "data_source": "getProfile(userId)", "description": "メールアドレス・登録日・プランステータス・無料期間残日数（trial中の場合）・Stripe課金状況" }
+        ]
+      }
+    },
+    {
+      "id": "page_admin_dashboard",
+      "path": "/admin",
+      "name": "管理ダッシュボード",
+      "layout_group": "(admin)",
+      "public": false,
+      "requires_auth": true,
+      "allowed_roles": ["admin"],
+      "components": {
+        "buttons": [],
+        "links": [
+          { "id": "link_admin_articles", "label": "記事管理", "destination": "/admin/articles", "type": "sidebar" },
+          { "id": "link_admin_ads", "label": "広告管理", "destination": "/admin/ads", "type": "sidebar" },
+          { "id": "link_admin_sources", "label": "ソース管理", "destination": "/admin/sources", "type": "sidebar" },
+          { "id": "link_admin_users", "label": "ユーザー管理", "destination": "/admin/users", "type": "sidebar" }
+        ],
+        "forms": [],
+        "data_displays": [
+          { "id": "data_admin_kpi_users", "type": "kpi", "data_source": "getAdminKPIs()", "description": "総ユーザー数・今日の新規登録・free_user数・premium_user数・MRR" },
+          { "id": "data_admin_kpi_content", "type": "kpi", "data_source": "getContentKPIs()", "description": "今日の公開記事数・承認待ち記事数・広告審査待ち数" },
+          { "id": "data_admin_pending_articles", "type": "table", "data_source": "getPendingArticles(limit=5)", "description": "承認待ち記事の直近5件。ワンクリック承認ボタン付き" }
+        ]
+      }
+    },
+    {
+      "id": "page_admin_articles",
+      "path": "/admin/articles",
+      "name": "記事管理",
+      "layout_group": "(admin)",
+      "public": false,
+      "requires_auth": true,
+      "allowed_roles": ["admin"],
+      "components": {
+        "buttons": [
+          {
+            "id": "btn_admin_approve_article",
+            "label": "承認",
+            "action": "記事を公開状態にする",
+            "action_type": "server_action",
+            "target": "approveArticle(articleId)",
+            "expected_result": "status=published に更新。free_user: 10時公開、premium_user: 7時公開のスケジュール適用"
+          },
+          {
+            "id": "btn_admin_bulk_approve",
+            "label": "選択を一括承認",
+            "action": "選択した記事を一括承認",
+            "action_type": "server_action",
+            "target": "bulkApproveArticles(articleIds[])",
+            "expected_result": "選択した全記事がpublishedに更新。「N件承認しました」トースト表示"
+          },
+          {
+            "id": "btn_admin_edit_article",
+            "label": "編集",
+            "action": "記事編集モーダル表示",
+            "action_type": "modal",
+            "target": "ArticleEditModal",
+            "expected_result": "記事本文・タイトル・ソース編集フォーム表示"
+          },
+          {
+            "id": "btn_admin_delete_article",
+            "label": "削除",
+            "action": "削除確認ダイアログ表示",
+            "action_type": "modal",
+            "target": "AlertDialog",
+            "expected_result": "確認後に論理削除（status=deleted）"
+          }
+        ],
+        "links": [],
+        "forms": [
+          {
+            "id": "form_article_filter",
+            "name": "記事フィルター",
+            "action": "client_state",
+            "fields": ["status（pending/published/deleted）", "genre（sports/economy/gaming）", "date_range"],
+            "submit_button": null,
+            "validation": "なし（オンデマンドフィルター）"
+          }
+        ],
+        "data_displays": [
+          { "id": "data_articles_table", "type": "table", "data_source": "getArticles(filters)", "description": "記事一覧テーブル（タイトル・ジャンル・生成日時・ステータス・承認/編集/削除ボタン）。デフォルト: 承認待ち（pending）を先頭表示" }
+        ]
+      }
+    },
+    {
+      "id": "page_admin_ads",
+      "path": "/admin/ads",
+      "name": "広告管理",
+      "layout_group": "(admin)",
+      "public": false,
+      "requires_auth": true,
+      "allowed_roles": ["admin"],
+      "components": {
+        "buttons": [
+          {
+            "id": "btn_admin_approve_ad",
+            "label": "承認・配信開始",
+            "action": "広告を審査通過・配信開始",
+            "action_type": "server_action",
+            "target": "approveAd(adId)",
+            "expected_result": "status=active。Stripe決済確認後に配信開始"
+          },
+          {
+            "id": "btn_admin_reject_ad",
+            "label": "却下",
+            "action": "広告を却下",
+            "action_type": "server_action",
+            "target": "rejectAd(adId, reason)",
+            "expected_result": "status=rejected。却下理由を広告主にメール通知"
+          }
+        ],
+        "links": [],
+        "forms": [
+          {
+            "id": "form_ad_filter",
+            "name": "広告フィルター",
+            "action": "client_state",
+            "fields": ["status（pending/active/rejected/expired）", "genre"],
+            "submit_button": null,
+            "validation": "なし"
+          }
+        ],
+        "data_displays": [
+          { "id": "data_ads_table", "type": "table", "data_source": "getAds(filters)", "description": "広告一覧（広告主名・ジャンル・期間・ステータス・クリック数・CTR・承認/却下ボタン）" },
+          { "id": "data_ads_performance", "type": "chart", "data_source": "getAdPerformance()", "description": "広告パフォーマンスグラフ（クリック数推移・ジャンル別CTR）" }
+        ]
+      }
+    },
+    {
+      "id": "page_admin_sources",
+      "path": "/admin/sources",
+      "name": "メディアソース管理",
+      "layout_group": "(admin)",
+      "public": false,
+      "requires_auth": true,
+      "allowed_roles": ["admin"],
+      "components": {
+        "buttons": [
+          {
+            "id": "btn_admin_add_source",
+            "label": "ソースを追加",
+            "action": "ソース追加モーダル表示",
+            "action_type": "modal",
+            "target": "SourceAddModal",
+            "expected_result": "ソース追加フォーム表示"
+          },
+          {
+            "id": "btn_admin_save_source",
+            "label": "保存",
+            "action": "ソース情報保存",
+            "action_type": "server_action",
+            "target": "saveMediaSource(sourceData)",
+            "expected_result": "sourcesテーブルに保存。「保存しました」トースト"
+          },
+          {
+            "id": "btn_admin_disable_source",
+            "label": "無効化",
+            "action": "ソースをクロール対象から除外",
+            "action_type": "server_action",
+            "target": "disableSource(sourceId)",
+            "expected_result": "active=false。次回クロールから除外"
+          }
+        ],
+        "links": [],
+        "forms": [
+          {
+            "id": "form_source_edit",
+            "name": "ソース編集フォーム",
+            "action": "saveMediaSource",
+            "fields": ["name", "url", "country", "language", "genre", "rss_url", "bias_label", "reliability_score"],
+            "submit_button": "btn_admin_save_source",
+            "validation": "名前・URL・国・ジャンル必須"
+          }
+        ],
+        "data_displays": [
+          { "id": "data_sources_table", "type": "table", "data_source": "getAdminSources()", "description": "メディアソース一覧（名前・国・ジャンル・最終クロール日時・記事数・有効/無効）" }
+        ]
+      }
+    },
+    {
+      "id": "page_admin_users",
+      "path": "/admin/users",
+      "name": "ユーザー管理",
+      "layout_group": "(admin)",
+      "public": false,
+      "requires_auth": true,
+      "allowed_roles": ["admin"],
+      "components": {
+        "buttons": [
+          {
+            "id": "btn_admin_downgrade_user",
+            "label": "free_userにダウングレード",
+            "action": "ユーザーロールをfree_userに変更",
+            "action_type": "server_action",
+            "target": "updateUserRole(userId, 'free_user')",
+            "expected_result": "ロール変更完了。Stripe課金を即時解約"
+          },
+          {
+            "id": "btn_admin_ban_user",
+            "label": "BAN（アクセス禁止）",
+            "action": "ユーザーを利用停止",
+            "action_type": "server_action",
+            "target": "banUser(userId)",
+            "expected_result": "banned=true。ログイン時に「利用停止」エラーを表示"
+          }
+        ],
+        "links": [],
+        "forms": [
+          {
+            "id": "form_user_search",
+            "name": "ユーザー検索フォーム",
+            "action": "client_state",
+            "fields": ["email（部分一致）", "role", "created_at_range"],
+            "submit_button": null,
+            "validation": "なし"
+          }
+        ],
+        "data_displays": [
+          { "id": "data_users_table", "type": "table", "data_source": "getUsers(filters)", "description": "ユーザー一覧（メール・ロール・登録日・無料期間残日数・課金状況・最終ログイン・操作ボタン）" }
+        ]
+      }
+    }
+  ],
+
+  "flows": [
+    {
+      "id": "flow_visitor_to_free",
+      "role": "visitor",
+      "name": "訪問→登録→全記事読み開始フロー",
+      "description": "visitorが記事を読もうとして登録し、free_userとして3ヶ月間全記事を無料で読む",
+      "priority": "critical",
+      "steps": [
+        { "step": 1, "page": "page_top", "action": "トップページで記事カードをタップ", "element": "link_top_article_card", "expected_result": "記事詳細ページへ遷移" },
+        { "step": 2, "page": "page_article_sports", "action": "冒頭300字プレビューを確認。「無料登録して続きを読む」ボタンを押下", "element": "btn_article_signup_cta", "expected_result": "/auth/signupへ遷移" },
+        { "step": 3, "page": "page_auth_signup", "action": "メール・パスワードを入力して「無料で登録する」ボタン押下", "element": "btn_signup_submit", "expected_result": "確認メール送信完了メッセージ表示" },
+        { "step": 4, "page": "page_auth_callback", "action": "確認メールリンクをクリック", "element": "data_callback_processing", "expected_result": "メール確認完了。free_userとして/ へリダイレクト" },
+        { "step": 5, "page": "page_top", "action": "記事カードを再度タップ（今度は全文読める）", "element": "link_top_article_card", "expected_result": "全文閲覧可能" }
+      ],
+      "edge_cases": [
+        { "name": "確認メール未受信", "condition": "メールが届かない場合", "expected": "login画面から「メール再送」リンクで再送可能" },
+        { "name": "登録済みメール", "condition": "すでに登録済みのメールで登録しようとした場合", "expected": "「このメールアドレスは既に登録されています」エラー表示。ログインページへのリンクを提示" }
+      ]
+    },
+    {
+      "id": "flow_free_to_premium",
+      "role": "free_user",
+      "name": "無料期間終了→課金→プレミアムユーザーフロー",
+      "description": "free_userが無料期間90日終了後に課金してpremium_userになる",
+      "priority": "critical",
+      "steps": [
+        { "step": 1, "page": "page_article_economy", "action": "91日目以降に2記事目を読もうとする。「プレミアムプランに登録して全記事読む」ボタンを押下", "element": "btn_economy_premium_cta", "expected_result": "/subscribeへ遷移" },
+        { "step": 2, "page": "page_subscribe", "action": "「月額プランを始める（¥980/月）」ボタン押下", "element": "btn_subscribe_monthly", "expected_result": "Stripe Checkoutページへリダイレクト" },
+        { "step": 3, "page": "外部:Stripe Checkout", "action": "カード情報入力・決済完了", "element": "Stripe hosted form", "expected_result": "Stripe Webhook受信 → profilesのrole=premium_user に更新" },
+        { "step": 4, "page": "page_top", "action": "決済成功リダイレクトで戻る", "element": "data_tab_sports", "expected_result": "premium_userとして全記事読み放題。「プレミアムプランを開始しました」トースト表示" }
+      ],
+      "edge_cases": [
+        { "name": "決済失敗", "condition": "カードが拒否された場合", "expected": "Stripe Checkoutがエラー表示。/subscribeへ戻りユーザーに再試行を促す" },
+        { "name": "年額プランへ変更", "condition": "月額から年額に変更したい", "expected": "/settings/accountの「プラン管理」からStripe Customer Portalで変更可能" }
+      ]
+    },
+    {
+      "id": "flow_premium_cancel",
+      "role": "premium_user",
+      "name": "プレミアム解約フロー",
+      "description": "premium_userがサブスクを解約してfree_userにダウングレードする",
+      "priority": "high",
+      "steps": [
+        { "step": 1, "page": "page_settings_account", "action": "「プラン管理・解約」ボタン押下", "element": "btn_account_manage_plan", "expected_result": "Stripe Customer Portalへリダイレクト" },
+        { "step": 2, "page": "外部:Stripe Customer Portal", "action": "「サブスクリプションをキャンセル」を操作", "element": "Stripe hosted form", "expected_result": "Stripe Webhook受信 → 請求期間末日にrole=free_userへ更新" },
+        { "step": 3, "page": "page_settings_account", "action": "ポータルから戻る", "element": "data_account_info", "expected_result": "「解約済み（期間末日まで有効）」ステータス表示" }
+      ],
+      "edge_cases": [
+        { "name": "解約後の期間内アクセス", "condition": "請求期間末日前にアクセスした場合", "expected": "引き続きpremium_userとして全記事閲覧可能" }
+      ]
+    },
+    {
+      "id": "flow_admin_article_approval",
+      "role": "admin",
+      "name": "朝の記事一括承認フロー",
+      "description": "adminが毎朝承認待ち記事を5分でまとめて承認する",
+      "priority": "critical",
+      "steps": [
+        { "step": 1, "page": "page_admin_dashboard", "action": "管理ダッシュボードにアクセス。承認待ち記事数を確認", "element": "data_admin_pending_articles", "expected_result": "承認待ち件数とプレビューを表示" },
+        { "step": 2, "page": "page_admin_articles", "action": "「記事管理」へ遷移。全件選択チェックボックスをオン", "element": "form_article_filter", "expected_result": "全承認待ち記事が選択状態に" },
+        { "step": 3, "page": "page_admin_articles", "action": "「選択を一括承認」ボタン押下", "element": "btn_admin_bulk_approve", "expected_result": "全記事がpublished状態に更新。有料7時/無料10時の公開スケジュール適用" }
+      ],
+      "edge_cases": [
+        { "name": "品質問題のある記事", "condition": "AI生成に誤りがあった場合", "expected": "「編集」ボタンから記事本文を修正してから承認" }
+      ]
+    }
+  ],
+
+  "businessFlows": [
+    {
+      "id": "bf_article_generation",
+      "name": "ニュース記事生成→公開フロー",
+      "description": "n8nスケジューラによる自動収集からadmin承認を経て公開されるまでのフロー",
+      "steps": [
+        {
+          "order": 1,
+          "actor": "n8nスケジューラ（システム）",
+          "action": "各国メディアのRSS/APIを15分間隔で巡回し、新着記事を収集する",
+          "target": "外部RSS/APIエンドポイント",
+          "result": "raw_articlesテーブルに収集記事を保存",
+          "next": "2"
+        },
+        {
+          "order": 2,
+          "actor": "AIマッチングエンジン（システム）",
+          "action": "同一トピックを扱う多国籍記事を検知・クラスタリングする",
+          "target": "raw_articlesテーブル（ベクトル類似度検索）",
+          "result": "article_clustersテーブルにトピックグループを作成",
+          "next": "3"
+        },
+        {
+          "order": 3,
+          "actor": "AI論調分析エンジン（システム）",
+          "action": "各ソース記事の論調ラベル（肯定/批判/中立）を抽出・付与する",
+          "target": "article_clustersに紐付くraw_articles",
+          "result": "各記事にbias_label（positive/critical/neutral）を記録",
+          "next": "4"
+        },
+        {
+          "order": 4,
+          "actor": "AI記事生成エンジン（システム）",
+          "action": "クラスタ内の複数ソースを統合した独自解説記事（800-1200字）を日本語で生成する",
+          "target": "articlesテーブル（status=draft）",
+          "result": "記事タイトル・本文・ソース一覧・論調サマリーを保存",
+          "next": "5"
+        },
+        {
+          "order": 5,
+          "actor": "AI品質チェックエンジン（システム）",
+          "action": "著作権・事実誤認・過度なバイアスを自動チェックし、問題があればflagを立てる",
+          "target": "articlesテーブル（draft）",
+          "result": "問題なし: status=pending_approval へ更新。問題あり: status=flagged + flagレコード作成",
+          "next": "条件: pending_approval → 6、flagged → 管理者通知のみ"
+        },
+        {
+          "order": 6,
+          "actor": "admin（黒川CEO）",
+          "action": "毎朝/admin/articlesにアクセスして承認待ち記事を確認し、5分でまとめて一括承認する",
+          "target": "articlesテーブル（status=pending_approval）",
+          "result": "status=published（スケジュール済み）に更新",
+          "next": "7"
+        },
+        {
+          "order": 7,
+          "actor": "配信スケジューラ（システム）",
+          "action": "ジャンルとロールに応じて公開時刻を管理する",
+          "target": "articlesテーブル（publish_at カラム）",
+          "result": "premium_user向け: 7時公開。free_user向け: 10時公開。各ロールへプッシュ通知を送信",
+          "next": "END（ユーザーが記事を読む）"
+        }
+      ]
+    },
+    {
+      "id": "bf_user_acquisition",
+      "name": "ユーザー登録→習慣化→課金フロー",
+      "description": "visitorがサービスを知り、登録し、3ヶ月で習慣化して課金ユーザーになるまでの流れ",
+      "steps": [
+        {
+          "order": 1,
+          "actor": "visitor",
+          "action": "検索エンジン or SNSシェアからトップページまたは記事ページにアクセスし、記事一覧を閲覧する",
+          "target": "/ または /sports/soccer/[slug]",
+          "result": "visitorsテーブルにセッション記録。記事全文は冒頭300字のみ表示",
+          "next": "2"
+        },
+        {
+          "order": 2,
+          "actor": "visitor",
+          "action": "「無料で登録して続きを読む」CTAボタンを押下してメール登録を行う",
+          "target": "/auth/signup",
+          "result": "profilesテーブルにrole=free_user / trial_started_at=NOW() を記録。free_userに昇格",
+          "next": "3"
+        },
+        {
+          "order": 3,
+          "actor": "free_user",
+          "action": "3ヶ月間、毎朝8時のプッシュ通知をトリガーに記事を読む習慣を形成する",
+          "target": "notification_logsテーブル / articlesテーブル",
+          "result": "DAU/WAU計測。記事閲覧ログをuser_article_readsテーブルに記録",
+          "next": "4"
+        },
+        {
+          "order": 4,
+          "actor": "配信スケジューラ（システム）",
+          "action": "試用期間終了7日前・3日前・前日に「無料期間終了が近い」メール+プッシュ通知を送る",
+          "target": "trial_started_at + 83日 / 87日 / 89日",
+          "result": "通知送信完了。/subscribeへの誘導リンクを含む",
+          "next": "5（課金する場合）または 5b（課金しない場合）"
+        },
+        {
+          "order": 5,
+          "actor": "free_user",
+          "action": "「プレミアムプランに登録」CTAを押下して月額980円または年額9,800円のプランに申込む",
+          "target": "/subscribe → Stripe Checkout",
+          "result": "Stripe決済完了 → Webhook受信 → role=premium_user に更新",
+          "next": "END（premium_userとして全記事読み放題）"
+        },
+        {
+          "order": "5b",
+          "actor": "free_user（課金しない場合）",
+          "action": "無料期間終了後も1日1記事のみ継続閲覧する",
+          "target": "user_article_readsテーブル（当日の読了記事数を確認）",
+          "result": "1記事目: 全文表示。2記事目以降: 冒頭300字+課金CTAを表示",
+          "next": "課金CTAへの誘導を継続"
+        }
+      ]
+    },
+    {
+      "id": "bf_ad_operations",
+      "name": "直接広告の出稿→配信フロー（Phase 2）",
+      "description": "広告主がフォームから申込み、自動審査・admin承認・決済・自動配信までの流れ",
+      "steps": [
+        {
+          "order": 1,
+          "actor": "広告主（外部）",
+          "action": "サイトのお問い合わせ/広告掲載フォームから広告素材・ターゲットジャンル・掲載期間・予算を申込む",
+          "target": "ad_requestsテーブル（status=submitted）",
+          "result": "申込み内容をSupabaseに保存。自動審査キューに追加",
+          "next": "2"
+        },
+        {
+          "order": 2,
+          "actor": "Ad Operations Agent（AIシステム）",
+          "action": "広告素材のブランドセーフティ自動審査（成人向けコンテンツ・ギャンブル・誤情報チェック）を実行する",
+          "target": "ad_requestsテーブル",
+          "result": "自動審査通過: status=pending_admin_approval。自動却下: status=rejected + 理由を広告主にメール",
+          "next": "条件: pending_admin_approval → 3、rejected → END"
+        },
+        {
+          "order": 3,
+          "actor": "admin（黒川CEO）",
+          "action": "LINE Bot通知を受けて「承認 AD-XXX Y」と5秒で返信し、広告を承認する",
+          "target": "ad_requestsテーブル（status=pending_admin_approval）",
+          "result": "status=payment_pending に更新。広告主に決済リンクをメール送信",
+          "next": "4"
+        },
+        {
+          "order": 4,
+          "actor": "広告主（外部）",
+          "action": "メールのStripeリンクから決済を完了する",
+          "target": "Stripe Payment Link",
+          "result": "Stripe Webhook受信 → status=active に更新。配信スケジュールが確定",
+          "next": "5"
+        },
+        {
+          "order": 5,
+          "actor": "広告配信システム（自動）",
+          "action": "ジャンルマッチングに基づいて記事詳細ページに広告を自動配信する",
+          "target": "adsテーブル / 記事詳細ページの広告枠",
+          "result": "free_userの閲覧時に広告表示（premium_userには非表示）。クリック数・CTR計測",
+          "next": "6"
+        },
+        {
+          "order": 6,
+          "actor": "Performance Analyst Agent（AIシステム）",
+          "action": "毎週月曜に広告パフォーマンスレポートを自動生成して広告主にメール送信する",
+          "target": "ad_click_logsテーブル",
+          "result": "週次レポートメール送信（クリック数・CTR・推定リーチ）",
+          "next": "7"
+        },
+        {
+          "order": 7,
+          "actor": "継続提案Agent（AIシステム）",
+          "action": "契約終了1週間前に広告主へ更新提案メールを自動送信する",
+          "target": "adsテーブル（end_date - 7日）",
+          "result": "継続提案メール送信。再申込みリンクを含む",
+          "next": "END or フロー再起動"
+        }
+      ]
+    },
+    {
+      "id": "bf_cs_inquiry",
+      "name": "CS問い合わせ対応フロー",
+      "description": "ユーザーがLINE Botに問い合わせを送り、自動対応→エスカレーションまでの流れ",
+      "steps": [
+        {
+          "order": 1,
+          "actor": "free_user または premium_user",
+          "action": "LINE公式アカウントにテキストで問い合わせを送信する（解約方法・支払い・パスワード等）",
+          "target": "LINE Bot（n8nワークフロー受信）",
+          "result": "キーワード検知開始",
+          "next": "2"
+        },
+        {
+          "order": 2,
+          "actor": "LINE Bot（自動）",
+          "action": "コマンドキーワード（「解約」「支払い」「パスワード」「変更」）を検知して定型文+操作リンクを自動返信する",
+          "target": "LINE Messaging API / n8nワークフロー",
+          "result": "96%のケースで解決。解約: Stripe Portalリンクを送信。パスワード: /auth/reset-passwordリンクを送信",
+          "next": "条件: 解決 → END。未解決 → 3"
+        },
+        {
+          "order": 3,
+          "actor": "FAQ Bot（自動）",
+          "action": "コマンド外の質問に対してFAQデータベースから自動回答を生成して返信する",
+          "target": "faq_itemsテーブル（ベクトル検索）",
+          "result": "3%のケースで解決。「参考になりましたか？」確認メッセージを送信",
+          "next": "条件: 解決 → END。未解決（「No」返信） → 4"
+        },
+        {
+          "order": 4,
+          "actor": "admin（黒川CEO）",
+          "action": "「オペレーターにつなぎます」通知を受け、ユーザーに直接返信して問題を解決する",
+          "target": "admin LINE受信トレイ（エスカレーション通知）",
+          "result": "1%のケース。adminがLINEで直接ユーザーに返答。対応完了後にcs_logsテーブルに記録",
+          "next": "END"
+        }
+      ]
+    }
+  ],
+
+  "permissions": {
+    "description": "全ロール × 全リソース × CRUD",
+    "resources": {
+      "articles": {
+        "visitor": { "create": false, "read": "冒頭300字のみ", "update": false, "delete": false },
+        "free_user_in_trial": { "create": false, "read": "全文", "update": false, "delete": false },
+        "free_user_post_trial": { "create": false, "read": "1日1記事全文。以降冒頭300字", "update": false, "delete": false },
+        "premium_user": { "create": false, "read": "全文（7時先行公開含む）", "update": false, "delete": false },
+        "admin": { "create": true, "read": "全文", "update": true, "delete": "論理削除のみ" }
+      },
+      "user_profiles": {
+        "visitor": { "create": true, "read": false, "update": false, "delete": false },
+        "free_user": { "create": false, "read": "自分のみ", "update": "自分のみ", "delete": "自分のみ（アカウント削除）" },
+        "premium_user": { "create": false, "read": "自分のみ", "update": "自分のみ", "delete": "自分のみ（アカウント削除）" },
+        "admin": { "create": true, "read": "全員", "update": "全員", "delete": "全員" }
+      },
+      "subscriptions": {
+        "visitor": { "create": false, "read": false, "update": false, "delete": false },
+        "free_user": { "create": true, "read": "自分のみ", "update": false, "delete": false },
+        "premium_user": { "create": false, "read": "自分のみ", "update": false, "delete": "解約（Stripe Portal経由）" },
+        "admin": { "create": true, "read": "全員", "update": "全員", "delete": "全員" }
+      },
+      "media_sources": {
+        "visitor": { "create": false, "read": true, "update": false, "delete": false },
+        "free_user": { "create": false, "read": true, "update": false, "delete": false },
+        "premium_user": { "create": false, "read": true, "update": false, "delete": false },
+        "admin": { "create": true, "read": true, "update": true, "delete": "論理削除（active=false）" }
+      },
+      "ads": {
+        "visitor": { "create": false, "read": "表示のみ（閲覧ページに埋め込み）", "update": false, "delete": false },
+        "free_user": { "create": false, "read": "表示のみ", "update": false, "delete": false },
+        "premium_user": { "create": false, "read": false, "update": false, "delete": false },
+        "admin": { "create": true, "read": true, "update": true, "delete": true }
+      },
+      "user_settings": {
+        "visitor": { "create": false, "read": false, "update": false, "delete": false },
+        "free_user": { "create": true, "read": "自分のみ", "update": "自分のみ", "delete": false },
+        "premium_user": { "create": true, "read": "自分のみ", "update": "自分のみ", "delete": false },
+        "admin": { "create": false, "read": "全員", "update": false, "delete": false }
+      }
+    }
+  },
+
+  "cross_role_interactions": [
+    {
+      "id": "xrole_article_publish",
+      "name": "AI生成記事→admin承認→ユーザー公開",
+      "description": "AIが生成した記事をadminが承認し、ロールに応じた時刻にユーザーへ公開される",
+      "initiator_role": "system_ai",
+      "affected_roles": ["admin", "free_user", "premium_user"],
+      "flow_steps": [
+        { "role": "system_ai", "action": "記事生成・品質チェック・pending_approval登録", "flow_ref": "bf_article_generation" },
+        { "role": "admin", "action": "一括承認ボタン押下", "flow_ref": "flow_admin_article_approval" },
+        { "role": "premium_user", "expected": "7時にプッシュ通知+全文閲覧可" },
+        { "role": "free_user", "expected": "10時にプッシュ通知+全文閲覧可（無料期間中）または1日1記事制限適用" }
+      ]
+    },
+    {
+      "id": "xrole_visitor_conversion",
+      "name": "visitor→free_user→premium_userのコンバージョン",
+      "description": "visitorsが記事の全文読解をトリガーに登録し、90日後に課金ユーザーになる",
+      "initiator_role": "visitor",
+      "affected_roles": ["free_user", "premium_user"],
+      "flow_steps": [
+        { "role": "visitor", "action": "記事全文ブロックで登録CTAをクリック", "flow_ref": "flow_visitor_to_free" },
+        { "role": "free_user", "expected": "3ヶ月間全記事閲覧。毎朝8時プッシュで習慣化" },
+        { "role": "free_user", "action": "90日後に課金CTAを押下", "flow_ref": "flow_free_to_premium" },
+        { "role": "premium_user", "expected": "全記事読み放題・広告非表示・7時先行配信" }
+      ]
+    },
+    {
+      "id": "xrole_ad_approval",
+      "name": "広告主申込→AI審査→admin承認→free_user広告表示",
+      "description": "広告主の申込みがAdminの5秒承認を経てfree_userへの広告表示まで流れる",
+      "initiator_role": "advertiser_external",
+      "affected_roles": ["admin", "free_user"],
+      "flow_steps": [
+        { "role": "advertiser_external", "action": "広告申込フォームから申込", "flow_ref": "bf_ad_operations" },
+        { "role": "system_ai", "action": "ブランドセーフティ自動審査" },
+        { "role": "admin", "action": "LINE Bot経由で5秒承認", "flow_ref": "flow_admin_article_approval" },
+        { "role": "free_user", "expected": "記事詳細ページに広告が表示される（premium_userには非表示）" }
+      ]
+    }
+  ],
+
+  "test_matrix": {
+    "description": "ロール別テストマトリクス",
+    "agents": [
+      {
+        "agent_id": "agent_visitor",
+        "role": "visitor",
+        "assigned_flows": ["flow_visitor_to_free"],
+        "assigned_pages": ["page_top", "page_sports_hub", "page_soccer_hub", "page_economy_hub", "page_gaming_hub", "page_article_sports", "page_article_economy", "page_article_gaming", "page_perspectives", "page_sources", "page_auth_signup", "page_auth_login", "page_about"],
+        "focus": "全文ブロックCTA動作確認・登録フロー・公開ページSEO確認・法定ページアクセス"
+      },
+      {
+        "agent_id": "agent_free_user_trial",
+        "role": "free_user（無料期間中）",
+        "assigned_flows": ["flow_free_to_premium"],
+        "assigned_pages": ["page_top", "page_article_sports", "page_article_economy", "page_article_gaming", "page_subscribe", "page_settings", "page_settings_account"],
+        "focus": "全記事全文閲覧・プッシュ通知設定・課金ページ表示"
+      },
+      {
+        "agent_id": "agent_free_user_post_trial",
+        "role": "free_user（無料期間終了後）",
+        "assigned_flows": ["flow_free_to_premium"],
+        "assigned_pages": ["page_top", "page_article_sports", "page_article_economy", "page_subscribe", "page_settings_account"],
+        "focus": "1日1記事制限の正確な動作・課金CTAの表示・無料期間終了バナー"
+      },
+      {
+        "agent_id": "agent_premium_user",
+        "role": "premium_user",
+        "assigned_flows": ["flow_premium_cancel"],
+        "assigned_pages": ["page_top", "page_article_sports", "page_article_economy", "page_article_gaming", "page_settings", "page_settings_account"],
+        "focus": "全記事読み放題・広告非表示確認・7時先行配信・解約フロー・Stripe Portal"
+      },
+      {
+        "agent_id": "agent_admin",
+        "role": "admin",
+        "assigned_flows": ["flow_admin_article_approval"],
+        "assigned_pages": ["page_admin_dashboard", "page_admin_articles", "page_admin_ads", "page_admin_sources", "page_admin_users"],
+        "focus": "記事一括承認・広告審査・ユーザー管理・KPI確認"
+      }
+    ],
+    "cross_role_agent": {
+      "agent_id": "agent_cross",
+      "focus": "記事公開タイミング（7時/10時）の差異確認・1日1記事制限の厳密な動作・広告のroleベース表示制御",
+      "assigned_interactions": ["xrole_article_publish", "xrole_visitor_conversion", "xrole_ad_approval"]
+    }
+  },
+
+  "playwright_config": {
+    "base_url": "http://localhost:3000",
+    "auth_setup": "tests/e2e/auth.setup.ts",
+    "output_dir": "tests/e2e",
+    "timeouts": {
+      "navigation": 10000,
+      "action": 5000,
+      "assertion": 5000
+    },
+    "responsive_breakpoints": [375, 768, 1280],
+    "test_categories": ["pages", "flows", "cross_role", "responsive", "access_control"],
+    "special_test_cases": [
+      "visitor: 記事全文ブロックが冒頭300字で切れていること",
+      "free_user_post_trial: 2記事目の全文ブロック（当日1記事消化後）",
+      "premium_user: 広告要素がDOMに存在しないこと",
+      "premium_user: 7時公開記事がfree_userには非表示であること",
+      "admin: /admin以外へのアクセスは/adminへリダイレクト"
+    ],
+    "docker": {
+      "compose_file": "~/.claude/docker/playwright/docker-compose.yml",
+      "service": "playwright-tester",
+      "results_dir": "~/.claude/gates/mikata"
+    }
+  }
+}

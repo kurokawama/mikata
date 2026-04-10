@@ -11,13 +11,13 @@ export function HeroSection() {
           {/* Left Content */}
           <div className="space-y-6">
             <Badge variant="outline" className="border-[#9CA3AF] text-[#E8E8F0] w-fit">
-              FEATURED
+              🌍 注目の多視点分析
             </Badge>
             <h1 className="text-4xl md:text-5xl font-bold text-white font-['Newsreader'] leading-tight">
-              CLIMATE SUMMIT
+              同じニュースを、世界はどう見たか
             </h1>
             <p className="text-[#E8E8F0] text-lg leading-relaxed max-w-md">
-              気候変動サミットで、各国の首脳が次世代の課題に立ち向かう。
+              各国メディアの論調をAIが分析。日本では伝わらない視点を、毎朝お届けします。
             </p>
             <Button className="bg-[#F59E0B] hover:bg-[#D97706] text-black font-medium py-3 px-8">
               記事を読む
@@ -57,10 +57,10 @@ export function HeroSection() {
             </div>
             <div className="relative z-10 text-center">
               <p className="text-[#F59E0B] font-['Montserrat'] font-bold text-6xl opacity-20">
-                CLIMATE
+                MIKATA
               </p>
               <p className="text-[#9CA3AF] font-['Montserrat'] font-bold text-3xl opacity-10 mt-2">
-                SUMMIT
+                世界のミカタ
               </p>
             </div>
           </div>

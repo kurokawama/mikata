@@ -9,16 +9,16 @@ export function PageHeader() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-border bg-white">
+    <header className="sticky top-0 z-50 w-full border-b border-[#E5E7EB] bg-[#1A1A2E]">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
           <Link href="/" className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-primary rounded flex items-center justify-center">
-              <span className="text-primary-foreground font-bold text-sm">S</span>
+            <div className="w-8 h-8 bg-[#1A1A2E] rounded flex items-center justify-center">
+              <span className="text-white font-bold text-sm font-['Montserrat']">M</span>
             </div>
-            <span className="hidden sm:inline font-montserrat font-bold text-primary">
-              Sports News
+            <span className="hidden sm:inline font-['Montserrat'] font-bold text-[#1A1A2E]">
+              MIKATA
             </span>
           </Link>
 
@@ -26,19 +26,19 @@ export function PageHeader() {
           <nav className="hidden md:flex items-center gap-8">
             <Link
               href="/"
-              className="text-sm font-montserrat text-foreground hover:text-primary transition-colors"
+              className="text-sm font-montserrat text-[#E8E8F0] hover:text-[#F59E0B] transition-colors"
             >
               ホーム
             </Link>
             <Link
               href="/"
-              className="text-sm font-montserrat text-foreground hover:text-primary transition-colors"
+              className="text-sm font-montserrat text-[#E8E8F0] hover:text-[#F59E0B] transition-colors"
             >
               カテゴリー
             </Link>
             <Link
               href="/"
-              className="text-sm font-montserrat text-foreground hover:text-primary transition-colors"
+              className="text-sm font-montserrat text-[#E8E8F0] hover:text-[#F59E0B] transition-colors"
             >
               検索
             </Link>

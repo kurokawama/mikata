@@ -1,0 +1,89 @@
+%% MIKATA - フロー図（自動生成）
+%% 生成日時: 2026-04-08T16:47:45.445Z
+%% ソース: flow-diagram.json
+
+%% === 業務フロー図（誰が何をしてどう流れるか） ===
+flowchart TD
+  %% === ニュース記事生成→公開フロー ===
+  bf_bf_article_generation_1["n8nスケジューラ（システム）\n各国メディアのRSS/APIを15分間隔で巡回し、新着記事を収集する"]
+  bf_bf_article_generation_2["AIマッチングエンジン（システム）\n同一トピックを扱う多国籍記事を検知・クラスタリングする"]
+  bf_bf_article_generation_1 -->|"raw_articlesテーブルに収集記事を保存"| bf_bf_article_generation_2
+  bf_bf_article_generation_3["AI論調分析エンジン（システム）\n各ソース記事の論調ラベル（肯定/批判/中立）を抽出・付与する"]
+  bf_bf_article_generation_2 -->|"article_clustersテーブルにトピックグループを作成"| bf_bf_article_generation_3
+  bf_bf_article_generation_4["AI記事生成エンジン（システム）\nクラスタ内の複数ソースを統合した独自解説記事（800-1200字）を日本語で生成する"]
+  bf_bf_article_generation_3 -->|"各記事にbias_label（positive/critical/neutral）を記録"| bf_bf_article_generation_4
+  bf_bf_article_generation_5["AI品質チェックエンジン（システム）\n著作権・事実誤認・過度なバイアスを自動チェックし、問題があればflagを立てる"]
+  bf_bf_article_generation_4 -->|"記事タイトル・本文・ソース一覧・論調サマリーを保存"| bf_bf_article_generation_5
+  bf_bf_article_generation_6["admin（黒川CEO）\n毎朝/admin/articlesにアクセスして承認待ち記事を確認し、5分でまとめて一括承認する"]
+  bf_bf_article_generation_5 -->|"問題なし: status=pending_approval へ更新。問題あり: status=flagged + flagレコード作成"| bf_bf_article_generation_6
+  bf_bf_article_generation_7["配信スケジューラ（システム）\nジャンルとロールに応じて公開時刻を管理する"]
+  bf_bf_article_generation_6 -->|"status=published（スケジュール済み）に更新"| bf_bf_article_generation_7
+
+  %% === ユーザー登録→習慣化→課金フロー ===
+  bf_bf_user_acquisition_1["visitor\n検索エンジン or SNSシェアからトップページまたは記事ページにアクセスし、記事一覧を閲覧する"]
+  bf_bf_user_acquisition_2["visitor\n「無料で登録して続きを読む」CTAボタンを押下してメール登録を行う"]
+  bf_bf_user_acquisition_1 -->|"visitorsテーブルにセッション記録。記事全文は冒頭300字のみ表示"| bf_bf_user_acquisition_2
+  bf_bf_user_acquisition_3["free_user\n3ヶ月間、毎朝8時のプッシュ通知をトリガーに記事を読む習慣を形成する"]
+  bf_bf_user_acquisition_2 -->|"profilesテーブルにrole=free_user / trial_started_at=NOW() を記録。free_userに昇格"| bf_bf_user_acquisition_3
+  bf_bf_user_acquisition_4["配信スケジューラ（システム）\n試用期間終了7日前・3日前・前日に「無料期間終了が近い」メール+プッシュ通知を送る"]
+  bf_bf_user_acquisition_3 -->|"DAU/WAU計測。記事閲覧ログをuser_article_readsテーブルに記録"| bf_bf_user_acquisition_4
+  bf_bf_user_acquisition_5["free_user\n「プレミアムプランに登録」CTAを押下して月額980円または年額9,800円のプランに申込む"]
+  bf_bf_user_acquisition_4 -->|"通知送信完了。/subscribeへの誘導リンクを含む"| bf_bf_user_acquisition_5
+  bf_bf_user_acquisition_5b["free_user（課金しない場合）\n無料期間終了後も1日1記事のみ継続閲覧する"]
+  bf_bf_user_acquisition_5 -->|"Stripe決済完了 → Webhook受信 → role=premium_user に更新"| bf_bf_user_acquisition_5b
+
+  %% === 直接広告の出稿→配信フロー（Phase 2） ===
+  bf_bf_ad_operations_1["広告主（外部）\nサイトのお問い合わせ/広告掲載フォームから広告素材・ターゲットジャンル・掲載期間・予算を申込む"]
+  bf_bf_ad_operations_2["Ad Operations Agent（AIシステム）\n広告素材のブランドセーフティ自動審査（成人向けコンテンツ・ギャンブル・誤情報チェック）を実行する"]
+  bf_bf_ad_operations_1 -->|"申込み内容をSupabaseに保存。自動審査キューに追加"| bf_bf_ad_operations_2
+  bf_bf_ad_operations_3["admin（黒川CEO）\nLINE Bot通知を受けて「承認 AD-XXX Y」と5秒で返信し、広告を承認する"]
+  bf_bf_ad_operations_2 -->|"自動審査通過: status=pending_admin_approval。自動却下: status=rejected + 理由を広告主にメール"| bf_bf_ad_operations_3
+  bf_bf_ad_operations_4["広告主（外部）\nメールのStripeリンクから決済を完了する"]
+  bf_bf_ad_operations_3 -->|"status=payment_pending に更新。広告主に決済リンクをメール送信"| bf_bf_ad_operations_4
+  bf_bf_ad_operations_5["広告配信システム（自動）\nジャンルマッチングに基づいて記事詳細ページに広告を自動配信する"]
+  bf_bf_ad_operations_4 -->|"Stripe Webhook受信 → status=active に更新。配信スケジュールが確定"| bf_bf_ad_operations_5
+  bf_bf_ad_operations_6["Performance Analyst Agent（AIシステム）\n毎週月曜に広告パフォーマンスレポートを自動生成して広告主にメール送信する"]
+  bf_bf_ad_operations_5 -->|"free_userの閲覧時に広告表示（premium_userには非表示）。クリック数・CTR計測"| bf_bf_ad_operations_6
+  bf_bf_ad_operations_7["継続提案Agent（AIシステム）\n契約終了1週間前に広告主へ更新提案メールを自動送信する"]
+  bf_bf_ad_operations_6 -->|"週次レポートメール送信（クリック数・CTR・推定リーチ）"| bf_bf_ad_operations_7
+
+  %% === CS問い合わせ対応フロー ===
+  bf_bf_cs_inquiry_1["free_user または premium_user\nLINE公式アカウントにテキストで問い合わせを送信する（解約方法・支払い・パスワード等）"]
+  bf_bf_cs_inquiry_2["LINE Bot（自動）\nコマンドキーワード（「解約」「支払い」「パスワード」「変更」）を検知して定型文+操作リンクを自動返信する"]
+  bf_bf_cs_inquiry_1 -->|"キーワード検知開始"| bf_bf_cs_inquiry_2
+  bf_bf_cs_inquiry_3["FAQ Bot（自動）\nコマンド外の質問に対してFAQデータベースから自動回答を生成して返信する"]
+  bf_bf_cs_inquiry_2 -->|"96%のケースで解決。解約: Stripe Portalリンクを送信。パスワード: /auth/reset-passwordリンクを送信"| bf_bf_cs_inquiry_3
+  bf_bf_cs_inquiry_4["admin（黒川CEO）\n「オペレーターにつなぎます」通知を受け、ユーザーに直接返信して問題を解決する"]
+  bf_bf_cs_inquiry_3 -->|"3%のケースで解決。「参考になりましたか？」確認メッセージを送信"| bf_bf_cs_inquiry_4
+
+
+%% === 画面遷移図 ===
+flowchart TD
+  subgraph visitor["🧑 visitor"]
+    visitor["トップページ"]
+    visitor_sports["スポーツハブ"]
+    visitor_sports_soccer["サッカーハブ"]
+    visitor_economy["経済・マーケットハブ"]
+    visitor_gaming["ゲーム・eスポーツハブ"]
+  end
+  subgraph free_user["🧑 free_user"]
+    free_user["トップページ"]
+    free_user_sports["スポーツハブ"]
+    free_user_sports_soccer["サッカーハブ"]
+    free_user_economy["経済・マーケットハブ"]
+    free_user_gaming["ゲーム・eスポーツハブ"]
+  end
+  subgraph premium_user["🧑 premium_user"]
+    premium_user["トップページ"]
+    premium_user_sports["スポーツハブ"]
+    premium_user_sports_soccer["サッカーハブ"]
+    premium_user_economy["経済・マーケットハブ"]
+    premium_user_gaming["ゲーム・eスポーツハブ"]
+  end
+  subgraph admin["🧑 admin"]
+    admin["トップページ"]
+    admin_sports["スポーツハブ"]
+    admin_sports_soccer["サッカーハブ"]
+    admin_economy["経済・マーケットハブ"]
+    admin_gaming["ゲーム・eスポーツハブ"]
+  end

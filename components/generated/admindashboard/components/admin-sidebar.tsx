@@ -39,7 +39,7 @@ export function AdminSidebar() {
       >
         {/* Header */}
         <div className="p-6 border-b border-[#1A1A2E]">
-          <h1 className="text-lg font-bold text-white">MIKAYAS ADMIN</h1>
+          <h1 className="text-lg font-bold text-white">MIKATA ADMIN</h1>
         </div>
 
         {/* Navigation */}

@@ -81,7 +81,7 @@ export function PageFooter() {
         {/* Divider */}
         <div className="border-t border-primary-foreground/20 pt-8">
           <p className="text-sm text-center text-primary-foreground/80">
-            © 2024 Sports News. All rights reserved.
+            © 2025 MIKATA. All rights reserved.
           </p>
         </div>
       </div>
