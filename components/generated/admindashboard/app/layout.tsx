@@ -1,17 +1,30 @@
 import type { Metadata } from 'next'
-import { Geist, Geist_Mono, Work_Sans, Newsreader, Montserrat } from 'next/font/google'
+import { Work_Sans, Newsreader, Montserrat } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/next'
 import './globals.css'
 
-const _geist = Geist({ subsets: ["latin"] });
-const _geistMono = Geist_Mono({ subsets: ["latin"] });
-const _workSans = Work_Sans({ subsets: ["latin"], variable: "--font-sans" });
-const _newsreader = Newsreader({ subsets: ["latin"] });
-const _montserrat = Montserrat({ subsets: ["latin"], variable: "--font-mono" });
+const workSans = Work_Sans({
+  subsets: ['latin'],
+  variable: '--font-work-sans',
+  display: 'swap',
+})
+
+const newsreader = Newsreader({
+  subsets: ['latin'],
+  variable: '--font-newsreader',
+  display: 'swap',
+  style: ['normal', 'italic'],
+})
+
+const montserrat = Montserrat({
+  subsets: ['latin'],
+  variable: '--font-montserrat',
+  display: 'swap',
+})
 
 export const metadata: Metadata = {
-  title: 'ミカヤ管理',
-  description: 'Admin Dashboard',
+  title: 'MIKATA ADMIN — 世界のミカタ CMS',
+  description: '多視点ニュースアプリ「世界のミカタ」の管理ダッシュボード',
   generator: 'v0.app',
   icons: {
     icon: [
@@ -39,7 +52,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="ja">
-      <body className={`${_workSans.variable} font-sans antialiased`}>
+      <body className={`${workSans.variable} ${newsreader.variable} ${montserrat.variable} font-sans antialiased`}>
         {children}
         {process.env.NODE_ENV === 'production' && <Analytics />}
       </body>
