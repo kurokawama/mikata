@@ -1,10 +1,12 @@
 {
-  "screenName": "ArticleDetail",
+  "screenName": "articledetail",
   "stitchProjectId": "3332940441353920537",
   "stitchScreenId": "6738ca97e2d548618c7a7151ac9f3e93",
-  "stitchScreenshotUrl": "https://lh3.googleusercontent.com/aida/ADBb0ugZXRQgbx8lrvbHFU0IMv6vMWSD_3aL78NjZ_D9jL54gjf_KKg0wUEUhE9nFacGqE29WO1kjvIM66lsxT6IEoeAPmdPj2inZLP0iQrr2VLnYP7hhibMGIkttzV0EYYvGb4FjCViIca50K6MLhodBBSP8jbbu5-3QXXHpgCYJgUy7xTt_LfwmD-qBouIxQq3pTRXJWrzkKAv1JkSbeiLQSoXaVFFATHr8VCw9-NrMJuIgnFr4IU0oomw4eU",
-  "v0ChatId": "dS8KAEma7ng",
-  "v0WebUrl": "https://v0.app/chat/dS8KAEma7ng",
-  "generatedAt": "2026-04-10T01:02:08.400Z",
-  "filesCount": 0
+  "v0ChatId": "fkdRUffD4Mk",
+  "v0WebUrl": "https://v0.app/chat/fkdRUffD4Mk",
+  "v0DemoUrl": "https://demo-kzmp0csjfcrnnmnuf39l.vusercontent.net?__v0_token=eyJhbGciOiJkaXIiLCJlbmMiOiJBMjU2R0NNIn0..b9Ge2DHiSx-meiQp.IgEgRsggH5aAejvGM4yqWkh0Ye-MiwIY5uRuhbyiC5xGBK1ha_KidqsAs737GhanUl1gNURVFonW4_SvZpCf1TEYvZTlsjj45uphAcCnh2DrMDK6sniFdYHM09B2JMUh2Ob8QzLO4VPXuwjhjweON_UPowMiLZGo7jeGjCOwmZc5jAoSme1QpFH3WzA2z-Nsvfy8FJIwEmHZ28VyiYZsfifSGeRJI7MemsfeeVNh0D5GmmWGBgXAt11S_rwxVoXXoZ3dFU0SyLZgHw.neuatr9TWDtXRzxGMEp6ZA",
+  "v0ScreenshotUrl": "https://api.v0.dev/v1/chats/fkdRUffD4Mk/versions/b_m5mKqIO1vxI/screenshot",
+  "generatedAt": "2026-04-10T01:07:33.294Z",
+  "filesCount": 11,
+  "source": "recovered-from-round1"
 }
