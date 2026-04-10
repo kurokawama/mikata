@@ -13,22 +13,36 @@
 - Design System: "Mikata Chronicle"
 - 生成画面: 5画面（Top, Article Detail, Subscribe, Country Perspectives, Admin Dashboard）
 
-## v0生成コード（V12 再生成 2026-04-10 — stitch-to-v0-direct画像直結）
-| 画面 | chatId | ファイル数 | v0 URL |
-|------|--------|----------|--------|
-| Top | fUmPOWfA8nD | 8 | https://v0.app/chat/fUmPOWfA8nD |
-| Article Detail | fkdRUffD4Mk | 11 | https://v0.app/chat/fkdRUffD4Mk |
-| Subscribe | utounVFv94N | 10 | https://v0.app/chat/utounVFv94N |
-| Perspectives | etKMKc41WJF | 4 | https://v0.app/chat/etKMKc41WJF |
-| Admin | oA7xlvhXtXG | 10 | https://v0.app/chat/oA7xlvhXtXG |
+## v0生成コード（V12 再々生成 2026-04-11 — Team plan新キー）
+| 画面 | chatId | v0 URL |
+|------|--------|--------|
+| Top | pX7mULgMnj7 | https://v0.app/chat/pX7mULgMnj7 |
+| Article Detail | pvRUaHQeF5W | https://v0.app/chat/pvRUaHQeF5W |
+| Subscribe | tBZgOt9wfBB | https://v0.app/chat/tBZgOt9wfBB |
+| Perspectives | fMs4xMgWt5Y | https://v0.app/chat/fMs4xMgWt5Y |
+| Admin Dashboard | p11ti2LOX0R | https://v0.app/chat/p11ti2LOX0R |
 
 - 方式: Stitchスクリーンショットをv0 API attachmentsで画像直接渡し（stitch-to-v0-direct.mjs）
 - 生成後自動git push（V12パイプライン修理済み）
 - アクセント色: Amber #F59E0B
 - 生成コード: components/generated/{画面名}/
 
-## デザイン採点結果
-- V12再生成: 3名採点+Critic実行中
+## デザイン採点結果（V12 2層採点）
+- Layer 1: Public Must 6/6 + Should 5/6 + Admin Must 3/3 + Should 3/3 = **PASS**
+- Layer 2 ROUND 2: 16.1/20点（閾値16）= **PASS**
+  - Brand Expression 3.5 / Information Design 3.6 / Emotional Pull 3.0 / Cross-Screen Consistency 3.0 / Polish 3.0
+- Gate D2b証拠: `~/.claude/gates/mikata/d2c-scoring-evidence.json`（HMAC有効）
+
+## Critic指摘（CTO実装時の必須修正事項）
+| # | 種別 | 内容 |
+|---|------|------|
+| C-1 | Critical | 5画面間のカラー分裂。全画面をPrimary #1A1A2E / Accent #F59E0Bに統一 |
+| C-2 | Critical | Subscribe headerがshadcn Button未使用。置換必須 |
+| C-4 | Critical | Perspectivesフィルタがネイキッドbutton。shadcn Button使用 |
+| C-5 | Critical | Subscribe PricingCardにtabIndex/onKeyDown追加必須 |
+| C-6 | Critical | ArticleHeroがimg直書き。Next.js Imageに置換（CLS対策） |
+| W-3 | Warning | --font-work-sansは未定義CSS変数。font-['Work_Sans']に統一 |
+| W-5 | Warning | copyright年を全画面© 2025 MIKATAに統一 |
 
 ## 統一カラーパレット（DESIGN.md準拠）
 | Token | Value | Usage |
