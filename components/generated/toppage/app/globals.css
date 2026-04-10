@@ -4,39 +4,50 @@
 @custom-variant dark (&:is(.dark *));
 
 :root {
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --destructive-foreground: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.646 0.222 41.116);
-  --chart-2: oklch(0.6 0.118 184.704);
-  --chart-3: oklch(0.398 0.07 227.392);
-  --chart-4: oklch(0.828 0.189 84.429);
-  --chart-5: oklch(0.769 0.188 70.08);
-  --radius: 0.625rem;
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+  /* MIKATA brand tokens */
+  --mikata-navy:       #1A1A2E;
+  --mikata-navy-deep:  #16213E;
+  --mikata-surface:    #F8F9FA;
+  --mikata-border:     #E5E7EB;
+  --mikata-border-mid: #D1D5DB;
+  --mikata-muted:      #9CA3AF;
+  --mikata-text-sub:   #4B5563;
+  --mikata-amber:      #F59E0B;
+  --mikata-amber-dark: #D97706;
+  --mikata-amber-bg:   #FEF3C7;
+  --mikata-green:      #22C55E;
+  --mikata-red:        #EF4444;
+  --mikata-red-dark:   #DC2626;
+  --mikata-ui:         #E8E8F0;
+
+  --background: #F8F9FA;
+  --foreground: #1A1A2E;
+  --card: #FFFFFF;
+  --card-foreground: #1A1A2E;
+  --popover: #FFFFFF;
+  --popover-foreground: #1A1A2E;
+  --primary: #1A1A2E;
+  --primary-foreground: #FFFFFF;
+  --secondary: #E8E8F0;
+  --secondary-foreground: #1A1A2E;
+  --muted: #F8F9FA;
+  --muted-foreground: #9CA3AF;
+  --accent: #F59E0B;
+  --accent-foreground: #1A1A2E;
+  --destructive: #EF4444;
+  --destructive-foreground: #FFFFFF;
+  --border: #E5E7EB;
+  --input: #E5E7EB;
+  --ring: #F59E0B;
+  --radius: 0.75rem;
+  --sidebar: #1A1A2E;
+  --sidebar-foreground: #E8E8F0;
+  --sidebar-primary: #F59E0B;
+  --sidebar-primary-foreground: #1A1A2E;
+  --sidebar-accent: #16213E;
+  --sidebar-accent-foreground: #E8E8F0;
+  --sidebar-border: #16213E;
+  --sidebar-ring: #F59E0B;
 }
 
 .dark {
@@ -75,9 +86,10 @@
 }
 
 @theme inline {
-  --font-sans: 'Work Sans', system-ui, sans-serif;
-  --font-serif: 'Newsreader', serif;
-  --font-mono: 'Geist Mono', 'Geist Mono Fallback';
+  --font-sans: var(--font-work-sans), 'Work Sans', system-ui, sans-serif;
+  --font-serif: var(--font-newsreader), 'Newsreader', Georgia, serif;
+  --font-mono: ui-monospace, 'Courier New', monospace;
+  --font-montserrat: var(--font-montserrat), 'Montserrat', sans-serif;
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);

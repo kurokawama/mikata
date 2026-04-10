@@ -3,30 +3,31 @@ import { Newsreader, Work_Sans, Montserrat } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/next'
 import './globals.css'
 
-const newsreader = Newsreader({ subsets: ["latin"] })
-const workSans = Work_Sans({ subsets: ["latin"] })
-const montserrat = Montserrat({ subsets: ["latin"] })
+const newsreader = Newsreader({
+  subsets: ['latin'],
+  variable: '--font-newsreader',
+  display: 'swap',
+})
+
+const workSans = Work_Sans({
+  subsets: ['latin'],
+  variable: '--font-work-sans',
+  display: 'swap',
+})
+
+const montserrat = Montserrat({
+  subsets: ['latin'],
+  variable: '--font-montserrat',
+  display: 'swap',
+})
 
 export const metadata: Metadata = {
-  title: 'MIKATA - 多視点ニュースアプリ',
-  description: '世界のミカタ。複数の視点からニュースを読むニュースアプリ。',
+  title: 'MIKATA — 世界のミカタ | 多視点ニュース',
+  description: '複雑な世界を、確かな視点から読み解く。MIKATAは各国メディアの報道を比較・分析する多視点ニュースアプリです。',
   generator: 'v0.app',
+  keywords: ['ニュース', '多視点', '国際報道', 'メディア分析', 'MIKATA'],
   icons: {
-    icon: [
-      {
-        url: '/icon-light-32x32.png',
-        media: '(prefers-color-scheme: light)',
-      },
-      {
-        url: '/icon-dark-32x32.png',
-        media: '(prefers-color-scheme: dark)',
-      },
-      {
-        url: '/icon.svg',
-        type: 'image/svg+xml',
-      },
-    ],
-    apple: '/apple-icon.png',
+    icon: '/icon.svg',
   },
 }
 
@@ -37,9 +38,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="ja">
-      <body className="font-sans antialiased" style={{
-        fontFamily: `${workSans.style.fontFamily}, system-ui, sans-serif`
-      }}>
+      <body className={`${newsreader.variable} ${workSans.variable} ${montserrat.variable} font-sans antialiased bg-[#F8F9FA] text-[#1A1A2E]`}>
         {children}
         {process.env.NODE_ENV === 'production' && <Analytics />}
       </body>
