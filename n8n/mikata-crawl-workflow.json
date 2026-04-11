@@ -1,0 +1,271 @@
+{
+  "name": "MIKATA Crawl Workflow",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 15
+            }
+          ]
+        }
+      },
+      "id": "cron-trigger",
+      "name": "15分間隔トリガー",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [200, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// 9媒体のRSSフィードURL\nconst feeds = [\n  // Sports\n  { url: 'https://www.espn.com/espn/rss/news', genre: 'sports', media_name: 'ESPN', country: 'United States', country_code: 'US' },\n  { url: 'https://feeds.bbci.co.uk/sport/rss.xml', genre: 'sports', media_name: 'BBC Sport', country: 'United Kingdom', country_code: 'GB' },\n  { url: 'https://e00-marca.uecdn.es/rss/futbol/futbol-internacional.xml', genre: 'sports', media_name: 'Marca', country: 'Spain', country_code: 'ES' },\n  // Economy\n  { url: 'https://feeds.bloomberg.com/markets/news.rss', genre: 'economy', media_name: 'Bloomberg', country: 'United States', country_code: 'US' },\n  { url: 'https://www.reuters.com/rssFeed/businessNews', genre: 'economy', media_name: 'Reuters', country: 'United Kingdom', country_code: 'GB' },\n  { url: 'https://www.nikkei.com/rss/economy.xml', genre: 'economy', media_name: 'Nikkei', country: 'Japan', country_code: 'JP' },\n  // Gaming\n  { url: 'https://feeds.feedburner.com/ign/all', genre: 'gaming', media_name: 'IGN', country: 'United States', country_code: 'US' },\n  { url: 'https://kotaku.com/rss', genre: 'gaming', media_name: 'Kotaku', country: 'United States', country_code: 'US' },\n  { url: 'https://www.4gamer.net/rss/index.xml', genre: 'gaming', media_name: '4Gamer', country: 'Japan', country_code: 'JP' }\n];\n\nreturn feeds.map(feed => ({ json: feed }));"
+      },
+      "id": "feed-list",
+      "name": "フィードリスト",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [420, 300]
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.url }}",
+        "options": {
+          "timeout": 10000
+        },
+        "headerParametersUI": {
+          "parameter": [
+            {
+              "name": "User-Agent",
+              "value": "MIKATA-Bot/1.0 (news aggregator; https://mikata.news)"
+            }
+          ]
+        }
+      },
+      "id": "fetch-rss",
+      "name": "RSSフェッチ",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [640, 300],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "// robots.txt チェック\nconst url = $input.first().json.url;\nconst origin = new URL(url).origin;\nconst robotsUrl = `${origin}/robots.txt`;\n\ntry {\n  const response = await fetch(robotsUrl, {\n    headers: { 'User-Agent': 'MIKATA-Bot/1.0' },\n    signal: AbortSignal.timeout(5000)\n  });\n  \n  if (response.ok) {\n    const text = await response.text();\n    const lines = text.split('\\n');\n    let isRelevantUA = false;\n    \n    for (const line of lines) {\n      const trimmed = line.trim().toLowerCase();\n      if (trimmed.startsWith('user-agent:')) {\n        const ua = trimmed.replace('user-agent:', '').trim();\n        isRelevantUA = ua === '*' || ua === 'mikata-bot';\n      }\n      if (isRelevantUA && trimmed.startsWith('disallow:')) {\n        const path = trimmed.replace('disallow:', '').trim();\n        if (path === '/' || path === '/*') {\n          return [{ json: { ...($input.first().json), blocked: true } }];\n        }\n      }\n    }\n  }\n} catch (e) {\n  // robots.txt not available, proceed\n}\n\nreturn [{ json: { ...($input.first().json), blocked: false } }];"
+      },
+      "id": "robots-check",
+      "name": "robots.txtチェック",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [860, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{ $json.blocked }}",
+              "value2": false
+            }
+          ]
+        }
+      },
+      "id": "filter-blocked",
+      "name": "ブロック済み除外",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1080, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// RSS XMLをパースして記事アイテムを抽出\nconst items = $input.all();\nconst results = [];\n\nfor (const item of items) {\n  const xml = item.json.data || '';\n  const genre = item.json.genre;\n  const media_name = item.json.media_name;\n  const country = item.json.country;\n  const country_code = item.json.country_code;\n  \n  // Simple XML item extraction\n  const itemRegex = /<item[^>]*>([\\s\\S]*?)<\\/item>/gi;\n  let match;\n  let count = 0;\n  \n  while ((match = itemRegex.exec(xml)) !== null && count < 5) {\n    const itemXml = match[1];\n    const titleMatch = itemXml.match(/<title[^>]*>(?:<!\\[CDATA\\[)?(.*?)(?:\\]\\]>)?<\\/title>/i);\n    const linkMatch = itemXml.match(/<link[^>]*>(?:<!\\[CDATA\\[)?(.*?)(?:\\]\\]>)?<\\/link>/i);\n    \n    if (titleMatch && linkMatch) {\n      results.push({\n        json: {\n          title: titleMatch[1].trim(),\n          url: linkMatch[1].trim(),\n          media_name,\n          country,\n          country_code,\n          genre\n        }\n      });\n      count++;\n    }\n  }\n}\n\nreturn results;"
+      },
+      "id": "parse-rss",
+      "name": "RSSパース",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1300, 200]
+    },
+    {
+      "parameters": {
+        "jsCode": "// 政治フィルタ（キーワードブラックリスト）\nconst politicsKeywords = [\n  '選挙', '政党', '大統領', '首相', '議会', '政権', '与党', '野党',\n  '国会', '内閣', '参議院', '衆議院', '投票', '候補者',\n  'election', 'president', 'congress', 'parliament', 'senate',\n  'democrat', 'republican', 'political', 'politician', 'prime minister',\n  'legislation', 'referendum', 'ballot', 'campaign',\n  'gobierno', 'elecciones', 'parlamento', 'partido'\n];\n\nconst items = $input.all();\nconst filtered = items.filter(item => {\n  const title = (item.json.title || '').toLowerCase();\n  return !politicsKeywords.some(kw => title.includes(kw.toLowerCase()));\n});\n\nreturn filtered;"
+      },
+      "id": "politics-filter",
+      "name": "政治フィルタ",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1520, 200]
+    },
+    {
+      "parameters": {
+        "jsCode": "// 2段重複検出（URL hash + content hash）\nconst crypto = require('crypto');\nconst items = $input.all();\nconst seen = new Set();\nconst unique = [];\n\nfor (const item of items) {\n  const urlHash = crypto.createHash('sha256').update(item.json.url).digest('hex');\n  const contentHash = crypto.createHash('sha256')\n    .update(`${item.json.title}|${item.json.media_name}`)\n    .digest('hex');\n  \n  const key = `${urlHash}|${contentHash}`;\n  if (!seen.has(urlHash) && !seen.has(contentHash)) {\n    seen.add(urlHash);\n    seen.add(contentHash);\n    unique.push(item);\n  }\n}\n\nreturn unique;"
+      },
+      "id": "dedup",
+      "name": "重複検出",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1740, 200]
+    },
+    {
+      "parameters": {
+        "jsCode": "// ジャンル別にソースをグループ化して記事生成APIへ送信\nconst items = $input.all();\nconst groups = {};\n\nfor (const item of items) {\n  const genre = item.json.genre;\n  if (!groups[genre]) groups[genre] = [];\n  groups[genre].push(item.json);\n}\n\nconst results = [];\nfor (const [genre, sources] of Object.entries(groups)) {\n  // 各ジャンルから2-4件のソースをまとめて1記事に\n  const batch = sources.slice(0, 4);\n  if (batch.length >= 2) {\n    results.push({\n      json: {\n        sources: batch,\n        genre: genre\n      }\n    });\n  }\n}\n\nreturn results;"
+      },
+      "id": "group-by-genre",
+      "name": "ジャンル別グループ化",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1960, 200]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{$env.MIKATA_API_URL || 'https://mikata.vercel.app'}}/api/articles/generate",
+        "authentication": "predefinedCredentialType",
+        "sendHeaders": true,
+        "headerParametersUI": {
+          "parameter": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer {{$env.SUPABASE_SERVICE_ROLE_KEY}}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParametersUI": {
+          "parameter": []
+        },
+        "jsonBody": "={{ JSON.stringify($json) }}",
+        "options": {
+          "timeout": 120000
+        }
+      },
+      "id": "call-generate-api",
+      "name": "記事生成API呼び出し",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [2180, 200],
+      "continueOnFail": true
+    }
+  ],
+  "connections": {
+    "15分間隔トリガー": {
+      "main": [
+        [
+          {
+            "node": "フィードリスト",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "フィードリスト": {
+      "main": [
+        [
+          {
+            "node": "robots.txtチェック",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "robots.txtチェック": {
+      "main": [
+        [
+          {
+            "node": "ブロック済み除外",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ブロック済み除外": {
+      "main": [
+        [
+          {
+            "node": "RSSフェッチ",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "RSSフェッチ": {
+      "main": [
+        [
+          {
+            "node": "RSSパース",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "RSSパース": {
+      "main": [
+        [
+          {
+            "node": "政治フィルタ",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "政治フィルタ": {
+      "main": [
+        [
+          {
+            "node": "重複検出",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "重複検出": {
+      "main": [
+        [
+          {
+            "node": "ジャンル別グループ化",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ジャンル別グループ化": {
+      "main": [
+        [
+          {
+            "node": "記事生成API呼び出し",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveManualExecutions": true,
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "staticData": null,
+  "tags": [
+    {
+      "name": "MIKATA"
+    },
+    {
+      "name": "Content Engine"
+    }
+  ]
+}

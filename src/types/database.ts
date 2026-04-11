@@ -242,6 +242,50 @@ export interface Database {
           },
         ]
       }
+      article_perspectives: {
+        Row: {
+          id: string
+          article_id: string
+          country: string
+          country_code: string
+          media_name: string
+          source_url: string
+          summary_80chars: string
+          sentiment_label: SentimentLabel
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          article_id: string
+          country: string
+          country_code: string
+          media_name: string
+          source_url: string
+          summary_80chars: string
+          sentiment_label?: SentimentLabel
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          article_id?: string
+          country?: string
+          country_code?: string
+          media_name?: string
+          source_url?: string
+          summary_80chars?: string
+          sentiment_label?: SentimentLabel
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'article_perspectives_article_id_fkey'
+            columns: ['article_id']
+            isOneToOne: false
+            referencedRelation: 'articles'
+            referencedColumns: ['id']
+          },
+        ]
+      }
       ad_placements: {
         Row: {
           id: string
@@ -324,6 +368,7 @@ export interface Database {
 // Convenience type aliases for direct row usage
 export type Profile = Database['public']['Tables']['profiles']['Row']
 export type Article = Database['public']['Tables']['articles']['Row']
+export type ArticlePerspective = Database['public']['Tables']['article_perspectives']['Row']
 export type MediaSource = Database['public']['Tables']['media_sources']['Row']
 export type Subscription = Database['public']['Tables']['subscriptions']['Row']
 export type AdPlacement = Database['public']['Tables']['ad_placements']['Row']

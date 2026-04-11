@@ -1,0 +1,72 @@
+{
+  "wave": 2,
+  "wave_name": "Content Engine",
+  "timestamp": "2026-04-11T14:00:00Z",
+  "executor": "claude-opus-4-6",
+  "pair_reviewer": "codex-cli",
+  "status": "PASS",
+  "phases": {
+    "phase_0_schema": {
+      "status": "PASS",
+      "files_created": [
+        "supabase/migrations/20260411000002_article_perspectives.sql"
+      ],
+      "files_modified": [
+        "src/types/database.ts"
+      ],
+      "details": "Added article_perspectives table with RLS policies (SELECT published for all, full access for admin). Added prompt_hash index on articles. Updated Database types with ArticlePerspective."
+    },
+    "phase_1_claude_api": {
+      "status": "PASS",
+      "files_created": [
+        "src/app/api/articles/generate/route.ts"
+      ],
+      "details": "POST endpoint with Zod validation, Claude Sonnet API integration, p-limit(2) rate limiting, 30s/60s/120s exponential backoff on 429, SHA-256 prompt_hash dedup, admin auth (service_role or JWT), inserts to articles + article_perspectives."
+    },
+    "phase_2_admin_approval": {
+      "status": "PASS",
+      "files_created": [
+        "src/app/admin/page.tsx",
+        "src/app/admin/admin-dashboard.tsx",
+        "src/app/admin/actions.ts"
+      ],
+      "details": "Server Component page with admin role check, client dashboard with stats cards, draft article queue, batch approve with checkboxes, individual preview modal with sentiment bar and perspectives."
+    },
+    "phase_3_manual_submit": {
+      "status": "PASS",
+      "files_created": [
+        "src/app/admin/manual-submit/page.tsx",
+        "src/app/admin/manual-submit/manual-submit-form.tsx",
+        "src/app/admin/manual-submit/actions.ts"
+      ],
+      "details": "URL input form, auto metadata extraction from known media hostnames, calls /api/articles/generate, genre/sub_genre selection, admin role guard."
+    },
+    "phase_4_n8n_workflow": {
+      "status": "PASS",
+      "files_created": [
+        "n8n/mikata-crawl-workflow.json"
+      ],
+      "details": "15-minute cron trigger, 9 media RSS feeds (sports/economy/gaming), robots.txt check, RSS parsing, politics keyword filter, URL hash + content hash dedup, genre grouping, POST to /api/articles/generate."
+    }
+  },
+  "quality_checks": {
+    "type_check": "NO_ERROR",
+    "lint": "0 errors, 1 warning (pre-existing in scripts/)",
+    "build": "PASS — 14 routes, 0 errors",
+    "rls_policies": "15 (13 Wave1 + 2 article_perspectives)",
+    "zod_validation": "All API inputs validated",
+    "admin_auth": "getUser() + profile role check on all admin routes",
+    "rate_limiting": "p-limit(2) on Claude API calls",
+    "backoff": "30s → 60s → 120s exponential on 429",
+    "dedup": "SHA-256 prompt_hash on articles table"
+  },
+  "shadcn_components_installed": [
+    "badge", "button", "input", "checkbox", "separator",
+    "avatar", "textarea", "card", "dialog", "tabs",
+    "label", "select", "table"
+  ],
+  "dependencies_added": [
+    "@anthropic-ai/sdk",
+    "p-limit"
+  ]
+}
