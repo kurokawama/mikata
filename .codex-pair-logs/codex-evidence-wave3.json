@@ -1,0 +1,119 @@
+{
+  "wave": 3,
+  "title": "UI Implementation (v0-based)",
+  "timestamp": "2026-04-11T12:00:00Z",
+  "gates": ["DC", "Q-L1"],
+  "verification": {
+    "v0_in_src": {
+      "command": "grep -rE 'v0-generated|from.*components/generated' src/app/ | wc -l",
+      "result": 22,
+      "threshold": ">=1",
+      "status": "PASS"
+    },
+    "tailwind_design_md_alignment": {
+      "command": "grep -c '1A1A2E' tailwind.config.ts src/app/globals.css | awk -F: '{s+=$2}END{print s}'",
+      "result": 12,
+      "threshold": ">=2",
+      "status": "PASS"
+    },
+    "build_pass": {
+      "command": "npm run build",
+      "result": "NO_ERROR",
+      "status": "PASS"
+    },
+    "lint_pass": {
+      "command": "npm run lint",
+      "result": "0 errors, 1 pre-existing warning (scripts/recover-v0-files.mjs)",
+      "status": "PASS"
+    }
+  },
+  "implementation_summary": {
+    "phase_0_token_fix": {
+      "description": "Created tailwind.config.ts with DESIGN.md tokens; globals.css already had correct #1A1A2E",
+      "files": ["tailwind.config.ts"]
+    },
+    "phase_2_components": {
+      "description": "Installed sheet+skeleton shadcn/ui components; created shared SiteHeader, SiteFooter, SentimentBar, ArticleCard, ArticleDetail, GenreHub",
+      "files": [
+        "src/components/ui/sheet.tsx",
+        "src/components/ui/skeleton.tsx",
+        "src/components/shared/site-header.tsx",
+        "src/components/shared/site-footer.tsx",
+        "src/components/shared/sentiment-bar.tsx",
+        "src/components/shared/article-card.tsx",
+        "src/components/shared/article-detail.tsx",
+        "src/components/shared/genre-hub.tsx"
+      ]
+    },
+    "phase_3_pages": {
+      "description": "Implemented all 5 v0-based pages: Top, Article Detail (per-genre routes), Subscribe, Perspectives, Admin Dashboard (kept existing functional implementation)",
+      "files": [
+        "src/app/page.tsx",
+        "src/app/subscribe/page.tsx",
+        "src/app/subscribe/pricing-cards.tsx",
+        "src/app/subscribe/trust-section.tsx",
+        "src/app/perspectives/page.tsx",
+        "src/app/perspectives/perspectives-hero.tsx",
+        "src/app/perspectives/countries-grid.tsx",
+        "src/app/perspectives/country-card.tsx",
+        "src/app/perspectives/countries-data.ts",
+        "src/app/perspectives/premium-cta.tsx",
+        "src/app/perspectives/[country]/page.tsx",
+        "src/app/sports/[sub]/[slug]/page.tsx",
+        "src/app/economy/[sub]/[slug]/page.tsx",
+        "src/app/gaming/[sub]/[slug]/page.tsx"
+      ]
+    },
+    "phase_4_routing": {
+      "description": "Created genre hub pages and static legal/about pages per CLAUDE.md Page Structure",
+      "files": [
+        "src/app/sports/page.tsx",
+        "src/app/economy/page.tsx",
+        "src/app/gaming/page.tsx",
+        "src/app/about/page.tsx",
+        "src/app/legal/terms/page.tsx",
+        "src/app/legal/privacy/page.tsx",
+        "src/app/legal/tokushoho/page.tsx",
+        "src/app/legal/editorial-policy/page.tsx"
+      ]
+    }
+  },
+  "design_tokens": {
+    "primary": "#1A1A2E",
+    "primary_light": "#16213E",
+    "accent": "#F59E0B",
+    "accent_hover": "#D97706",
+    "sentiment_positive": "#22C55E",
+    "sentiment_negative": "#EF4444",
+    "sentiment_neutral": "#9CA3AF",
+    "background": "#F8F9FA",
+    "source": "DESIGN.md"
+  },
+  "v0_source": {
+    "toppage": "components/generated/toppage/",
+    "articledetail": "components/generated/articledetail/",
+    "subscribepage": "components/generated/subscribepage/",
+    "perspectivespage": "components/generated/perspectivespage/",
+    "admindashboard": "components/generated/admindashboard/"
+  },
+  "routes_created": [
+    "/",
+    "/subscribe",
+    "/perspectives",
+    "/perspectives/[country]",
+    "/sports",
+    "/sports/[sub]/[slug]",
+    "/economy",
+    "/economy/[sub]/[slug]",
+    "/gaming",
+    "/gaming/[sub]/[slug]",
+    "/about",
+    "/legal/terms",
+    "/legal/privacy",
+    "/legal/tokushoho",
+    "/legal/editorial-policy"
+  ],
+  "total_routes": 24,
+  "executor": "claude-opus-4-6",
+  "pair_mode": "Cursor+Codex"
+}
