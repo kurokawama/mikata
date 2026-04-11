@@ -12,6 +12,8 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // v0-generated reference components (not part of main app)
+    "components/generated/**",
   ]),
 ]);
 

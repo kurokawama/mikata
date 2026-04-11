@@ -1,0 +1,83 @@
+{
+  "wave": 1,
+  "name": "Foundation (DB/Auth/Stripe)",
+  "date": "2026-04-11",
+  "gates": ["AUTH", "SD"],
+  "verification": {
+    "type_check": "NO_ERROR",
+    "rls_policies": 13,
+    "proxy_ts": "OK",
+    "build": "PASS (11 routes, 0 errors)",
+    "lint": "PASS (0 errors, 1 warning in scripts/)"
+  },
+  "files_created": {
+    "migration": "supabase/migrations/20260411000001_create_tables.sql",
+    "types": "src/types/database.ts",
+    "supabase_clients": [
+      "src/lib/supabase/client.ts",
+      "src/lib/supabase/server.ts",
+      "src/lib/supabase/middleware.ts",
+      "src/lib/supabase/admin.ts"
+    ],
+    "proxy": "proxy.ts",
+    "middleware": "src/middleware.ts",
+    "auth_pages": [
+      "src/app/login/page.tsx",
+      "src/app/login/login-form.tsx",
+      "src/app/login/actions.ts",
+      "src/app/signup/page.tsx",
+      "src/app/signup/signup-form.tsx",
+      "src/app/signup/actions.ts",
+      "src/app/signup/confirm/page.tsx",
+      "src/app/reset-password/page.tsx",
+      "src/app/reset-password/reset-password-form.tsx",
+      "src/app/reset-password/actions.ts",
+      "src/app/auth/callback/route.ts"
+    ],
+    "stripe": [
+      "src/lib/stripe.ts",
+      "src/app/api/checkout/route.ts",
+      "src/app/api/portal/route.ts",
+      "src/app/api/webhooks/stripe/route.ts"
+    ],
+    "app_shell": [
+      "src/app/layout.tsx",
+      "src/app/globals.css",
+      "src/app/page.tsx"
+    ],
+    "utils": "src/lib/utils.ts"
+  },
+  "db_schema": {
+    "tables": ["profiles", "articles", "media_sources", "subscriptions", "ad_placements"],
+    "enums": ["user_role", "article_status", "subscription_plan", "subscription_status", "ad_status", "sentiment_label", "media_reliability", "feed_type"],
+    "rls_policies": 13,
+    "triggers": ["handle_new_user (3-month trial)", "update_updated_at (profiles/articles/subscriptions)"],
+    "seed_data": "12 media_sources (sports/economy/gaming)"
+  },
+  "auth_flow": {
+    "roles": ["visitor", "free_user", "premium_user", "admin"],
+    "trial": "90 days from signup (DB trigger, NOT Stripe trial)",
+    "protected_routes": ["/subscribe", "/settings", "/admin"],
+    "admin_check": "profile.role === 'admin' in middleware"
+  },
+  "stripe_integration": {
+    "plans": ["monthly (env: STRIPE_MONTHLY_PRICE_ID)", "annual (env: STRIPE_ANNUAL_PRICE_ID)"],
+    "checkout": "POST /api/checkout with {plan: 'monthly'|'annual'}",
+    "portal": "POST /api/portal",
+    "webhook_events": ["checkout.session.completed", "customer.subscription.updated", "customer.subscription.deleted"],
+    "role_sync": "webhook updates profiles.role to premium_user/free_user based on subscription status"
+  },
+  "security": {
+    "server_only_guard": "src/lib/supabase/admin.ts imports 'server-only'",
+    "zod_validation": "All server actions validate with Zod",
+    "getUser_not_getSession": "Auth uses getUser() throughout",
+    "service_role_centralized": "createAdminClient() in admin.ts only",
+    "webhook_signature_verified": "stripe.webhooks.constructEvent()"
+  },
+  "design_tokens": {
+    "primary": "#1A1A2E (Deep Navy)",
+    "accent": "#F59E0B (Amber)",
+    "fonts": "Work Sans + Newsreader + Montserrat (next/font/google)",
+    "source": "globals.css @theme inline block from v0 toppage"
+  }
+}
