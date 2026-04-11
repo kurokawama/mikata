@@ -1,5 +1,11 @@
 /* v0-generated — adapted from components/generated/admindashboard */
+import type { Metadata } from 'next'
 import { redirect } from 'next/navigation'
+
+export const metadata: Metadata = {
+  title: '管理画面 — MIKATA',
+  robots: { index: false, follow: false },
+}
 import { getUser } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { AdminDashboard } from './admin-dashboard'

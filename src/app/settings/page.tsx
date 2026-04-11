@@ -9,6 +9,7 @@ import { SettingsForm } from './settings-form'
 export const metadata: Metadata = {
   title: '設定 — MIKATA',
   description: '通知設定やジャンルの優先表示を管理します。',
+  robots: { index: false },
 }
 
 export default async function SettingsPage() {

@@ -1,0 +1,34 @@
+# MIKATA — 世界のミカタ
+> AIが各国メディアの論調を分析し、独自解説+ソースリンクで多視点ニュースを日本語提供するサービス
+
+## About
+MIKATA is a multi-perspective news platform that uses AI to analyze how different countries' media cover the same story. We provide original 800-1200 character analysis in Japanese, along with source links and sentiment labels (positive/negative/neutral) for each country's perspective.
+
+## Topics
+- Sports (soccer, baseball, basketball, etc.)
+- Economy & Markets (stocks, forex, crypto, etc.)
+- Gaming & Esports
+
+## Key URLs
+- Homepage: https://mikata.media/
+- Sports: https://mikata.media/sports
+- Economy: https://mikata.media/economy
+- Gaming: https://mikata.media/gaming
+- Perspectives by Country: https://mikata.media/perspectives
+- Media Sources: https://mikata.media/sources
+- About: https://mikata.media/about
+- Terms: https://mikata.media/legal/terms
+- Privacy: https://mikata.media/legal/privacy
+- Editorial Policy: https://mikata.media/legal/editorial-policy
+
+## Content Model
+Each article contains:
+1. Original AI analysis (800-1200 chars) — the "primary" work under copyright law
+2. Multi-country perspective links (80-char summaries + links) — the "secondary/citation" component
+3. Sentiment analysis: positive/negative/neutral ratio per source country
+
+## Robots Policy
+All AI bots (GPTBot, PerplexityBot, ClaudeBot) are allowed to crawl this site. See /robots.txt for details.
+
+## Contact
+Website: https://mikata.media
