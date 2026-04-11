@@ -39,12 +39,19 @@ export async function POST(request: NextRequest) {
       metadata: { supabase_user_id: user.id },
     })
     customerId = customer.id
+
+    // Persist stripe_customer_id to profile immediately
+    await supabase
+      .from('profiles')
+      .update({ stripe_customer_id: customerId })
+      .eq('id', user.id)
   }
 
   const origin = request.nextUrl.origin
 
   const session = await stripe.checkout.sessions.create({
     customer: customerId,
+    metadata: { supabase_user_id: user.id },
     line_items: [{ price: priceId, quantity: 1 }],
     mode: 'subscription',
     success_url: `${origin}/subscribe?success=true`,

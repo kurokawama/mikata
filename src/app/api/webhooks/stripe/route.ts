@@ -29,7 +29,15 @@ export async function POST(request: NextRequest) {
   switch (event.type) {
     case 'checkout.session.completed': {
       const session = event.data.object as Stripe.Checkout.Session
-      const userId = session.metadata?.supabase_user_id ?? null
+      let userId = session.metadata?.supabase_user_id ?? null
+
+      // Fallback: retrieve user_id from subscription metadata
+      if (!userId && session.subscription) {
+        const sub = await stripe.subscriptions.retrieve(
+          session.subscription as string,
+        )
+        userId = sub.metadata?.supabase_user_id ?? null
+      }
 
       if (userId && session.customer) {
         await admin

@@ -1,0 +1,85 @@
+{
+  "timestamp": "2026-04-11T14:30:00+00:00",
+  "wave": 1,
+  "wave_name": "Foundation (DB/Auth/Stripe)",
+  "gates": ["AUTH", "SD"],
+  "mode": "implementation",
+  "project_dir": "/home/ubuntu/mikata",
+  "codex_invoked": true,
+  "verdict": "PASS",
+  "verification": {
+    "type_check": "NO_ERROR",
+    "rls_policies": 13,
+    "proxy_ts": "OK",
+    "lint_errors": 0,
+    "build": "SUCCESS"
+  },
+  "files_created_or_modified": [
+    "src/types/database.ts",
+    "src/lib/supabase/client.ts",
+    "src/lib/supabase/server.ts",
+    "src/lib/supabase/admin.ts",
+    "src/lib/supabase/middleware.ts",
+    "src/middleware.ts",
+    "src/lib/stripe.ts",
+    "src/lib/utils.ts",
+    "src/app/layout.tsx",
+    "src/app/page.tsx",
+    "src/app/globals.css",
+    "src/app/login/page.tsx",
+    "src/app/login/login-form.tsx",
+    "src/app/login/actions.ts",
+    "src/app/signup/page.tsx",
+    "src/app/signup/signup-form.tsx",
+    "src/app/signup/actions.ts",
+    "src/app/signup/confirm/page.tsx",
+    "src/app/reset-password/page.tsx",
+    "src/app/reset-password/reset-password-form.tsx",
+    "src/app/reset-password/actions.ts",
+    "src/app/auth/callback/route.ts",
+    "src/app/api/checkout/route.ts",
+    "src/app/api/portal/route.ts",
+    "src/app/api/webhooks/stripe/route.ts",
+    "supabase/migrations/20260411000001_create_tables.sql",
+    "proxy.ts",
+    "next.config.ts",
+    "package.json",
+    "vercel.json"
+  ],
+  "auth_gate": {
+    "signup_page": true,
+    "login_page": true,
+    "reset_password_page": true,
+    "auth_callback": true,
+    "middleware_protection": true,
+    "zod_validation": true,
+    "getUser_not_getSession": true,
+    "admin_role_check": true
+  },
+  "sd_gate": {
+    "migration_exists": true,
+    "tables": ["profiles", "articles", "media_sources", "subscriptions", "ad_placements"],
+    "rls_enabled": true,
+    "rls_policy_count": 13,
+    "indexes": 10,
+    "triggers": 4,
+    "seed_data": true
+  },
+  "stripe_integration": {
+    "checkout_route": true,
+    "portal_route": true,
+    "webhook_route": true,
+    "events_handled": [
+      "checkout.session.completed",
+      "customer.subscription.updated",
+      "customer.subscription.deleted"
+    ]
+  },
+  "bugs_fixed": [
+    "checkout route: added session-level metadata for webhook to read supabase_user_id",
+    "checkout route: save stripe_customer_id to profile immediately after customer creation",
+    "webhook: added fallback to retrieve user_id from subscription metadata when session metadata missing",
+    "package.json: renamed from dr-stretch-spot to mikata",
+    "vercel.json: removed stale cron reference to non-existent /api/cron/reminders"
+  ]
+}
