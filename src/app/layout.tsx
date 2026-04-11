@@ -1,5 +1,5 @@
 import type { Metadata } from 'next'
-import { Work_Sans, Newsreader, Montserrat } from 'next/font/google'
+import { Work_Sans, Newsreader, Montserrat, Noto_Sans_JP } from 'next/font/google'
 import './globals.css'
 
 const workSans = Work_Sans({
@@ -21,6 +21,13 @@ const montserrat = Montserrat({
   weight: ['600', '700'],
 })
 
+const notoSansJP = Noto_Sans_JP({
+  subsets: ['latin'],
+  variable: '--font-noto-sans-jp',
+  display: 'swap',
+  weight: ['400', '500', '700'],
+})
+
 export const metadata: Metadata = {
   title: 'MIKATA — 世界のミカタ',
   description:
@@ -36,7 +43,7 @@ export default function RootLayout({
   return (
     <html
       lang="ja"
-      className={`${workSans.variable} ${newsreader.variable} ${montserrat.variable}`}
+      className={`${workSans.variable} ${newsreader.variable} ${montserrat.variable} ${notoSansJP.variable}`}
     >
       <body className="min-h-screen bg-background font-sans antialiased">
         {children}

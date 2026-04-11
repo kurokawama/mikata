@@ -1,12 +1,12 @@
 {
   "wave": 3,
   "title": "UI Implementation (v0-based)",
-  "timestamp": "2026-04-11T12:00:00Z",
+  "timestamp": "2026-04-11T14:00:00Z",
   "gates": ["DC", "Q-L1"],
   "verification": {
     "v0_in_src": {
       "command": "grep -rE 'v0-generated|from.*components/generated' src/app/ | wc -l",
-      "result": 22,
+      "result": 27,
       "threshold": ">=1",
       "status": "PASS"
     },
@@ -19,11 +19,18 @@
     "build_pass": {
       "command": "npm run build",
       "result": "NO_ERROR",
+      "build_time": "18.0s",
+      "static_pages": 26,
       "status": "PASS"
     },
     "lint_pass": {
       "command": "npm run lint",
       "result": "0 errors, 1 pre-existing warning (scripts/recover-v0-files.mjs)",
+      "status": "PASS"
+    },
+    "type_check": {
+      "command": "npm run type-check",
+      "result": "NO_ERROR",
       "status": "PASS"
     }
   },
@@ -111,9 +118,24 @@
     "/legal/terms",
     "/legal/privacy",
     "/legal/tokushoho",
-    "/legal/editorial-policy"
+    "/legal/editorial-policy",
+    "/settings",
+    "/sources",
+    "/sources/[media-slug]",
+    "/admin",
+    "/login",
+    "/signup",
+    "/reset-password",
+    "/signup/confirm",
+    "/admin/manual-submit"
   ],
-  "total_routes": 24,
+  "total_routes": 26,
+  "quality_improvements": {
+    "fonts": "Added Noto Sans JP (4th font per DESIGN.md spec). All 4 design fonts now loaded: Newsreader, Work Sans, Montserrat, Noto Sans JP.",
+    "missing_pages": "Added /settings (user preferences with Zod validation), /sources (media listing), /sources/[media-slug] (media detail).",
+    "admin_provenance": "Added v0-generated comment to admin page for consistency.",
+    "security": "Sources pages use anon-key client (not service_role). Settings actions use getUser() auth check + Zod validation."
+  },
   "executor": "claude-opus-4-6",
   "pair_mode": "Cursor+Codex"
 }

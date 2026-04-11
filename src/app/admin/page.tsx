@@ -1,3 +1,4 @@
+/* v0-generated — adapted from components/generated/admindashboard */
 import { redirect } from 'next/navigation'
 import { getUser } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
