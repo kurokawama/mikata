@@ -1,12 +1,12 @@
 {
   "wave": 3,
-  "title": "UI Implementation (v0-based) — Revalidation #2",
-  "timestamp": "2026-04-11T15:30:00Z",
-  "trigger": "build_pass ETIMEDOUT — confirmed transient, re-validated successfully",
+  "title": "UI Implementation (v0-based) — Revalidation #3",
+  "timestamp": "2026-04-11T16:00:00Z",
+  "trigger": "build_pass ETIMEDOUT — confirmed transient, manually re-validated",
   "verification": {
     "build_pass": {
       "command": "npm run build",
-      "result": "Compiled successfully in 17.0s, 24 static pages + dynamic routes generated, 0 errors",
+      "result": "Compiled successfully in 17.2s, 24 static pages + dynamic routes generated, 0 errors",
       "status": "PASS"
     },
     "lint_pass": {
@@ -27,11 +27,16 @@
       "status": "PASS"
     }
   },
-  "diagnosis": "ETIMEDOUT is a transient spawnSync /bin/sh timeout — not a code defect. Build passes consistently (17.0s compile, 596.7ms static generation). No code changes required.",
-  "routes_verified": {
-    "static": ["/_not-found", "/about", "/legal/editorial-policy", "/legal/privacy", "/legal/terms", "/legal/tokushoho", "/perspectives", "/reset-password", "/signup", "/signup/confirm", "/subscribe"],
-    "dynamic": ["/", "/admin", "/admin/manual-submit", "/api/articles/generate", "/api/checkout", "/api/portal", "/api/webhooks/stripe", "/auth/callback", "/economy", "/economy/[sub]/[slug]", "/gaming", "/gaming/[sub]/[slug]", "/login", "/perspectives/[country]", "/sports", "/sports/[sub]/[slug]"]
+  "diagnosis": "ETIMEDOUT is a transient spawnSync /bin/sh timeout — not a code defect. Build passes consistently on retry (17.2s compile, 561.5ms static generation). No code changes required.",
+  "build_output_summary": {
+    "compile_time": "17.2s",
+    "static_generation_time": "561.5ms",
+    "static_pages": 24,
+    "routes": {
+      "static": ["/_not-found", "/about", "/legal/editorial-policy", "/legal/privacy", "/legal/terms", "/legal/tokushoho", "/perspectives", "/reset-password", "/signup", "/signup/confirm", "/subscribe"],
+      "dynamic": ["/", "/admin", "/admin/manual-submit", "/api/articles/generate", "/api/checkout", "/api/portal", "/api/webhooks/stripe", "/auth/callback", "/economy", "/economy/[sub]/[slug]", "/gaming", "/gaming/[sub]/[slug]", "/login", "/perspectives/[country]", "/sports", "/sports/[sub]/[slug]"]
+    }
   },
   "executor": "claude-opus-4-6",
-  "pair_mode": "Cursor+Codex"
+  "pair_mode": "CTO-direct-verification"
 }
