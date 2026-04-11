@@ -1,0 +1,33 @@
+{
+  "wave": 3,
+  "title": "UI Implementation (v0-based) — Revalidation",
+  "timestamp": "2026-04-11T14:00:00Z",
+  "trigger": "build_pass ETIMEDOUT — re-ran to confirm transient failure",
+  "verification": {
+    "build_pass": {
+      "command": "npm run build",
+      "result": "✓ Compiled successfully in 17.1s, 24/24 static pages generated",
+      "status": "PASS"
+    },
+    "lint_pass": {
+      "command": "npm run lint",
+      "result": "0 errors, 1 pre-existing warning (scripts/recover-v0-files.mjs)",
+      "status": "PASS"
+    },
+    "v0_in_src": {
+      "command": "grep -rE 'v0-generated|from.*components/generated' src/app/ | wc -l",
+      "result": 22,
+      "threshold": ">=1",
+      "status": "PASS"
+    },
+    "tailwind_design_md_alignment": {
+      "command": "grep -c '1A1A2E' tailwind.config.ts src/app/globals.css | awk -F: '{s+=$2}END{print s}'",
+      "result": 12,
+      "threshold": ">=2",
+      "status": "PASS"
+    }
+  },
+  "diagnosis": "Original ETIMEDOUT was a transient spawnSync /bin/sh timeout — not a code issue. Build succeeds consistently on retry.",
+  "executor": "claude-opus-4-6",
+  "pair_mode": "Cursor+Codex"
+}
