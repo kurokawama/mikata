@@ -225,7 +225,7 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
           </div>
         )}
 
-        {canView && <ArticlePerspectives perspectives={typedPerspectives} />}
+        <ArticlePerspectives perspectives={typedPerspectives} isSubscribed={isSubscribed} />
 
         {typedArticle.media_sources?.url && (
           <div className="mt-8 border-t pt-6">

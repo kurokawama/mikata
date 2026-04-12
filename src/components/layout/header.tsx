@@ -17,6 +17,9 @@ import type { Profile } from "@/types/database";
 const navItems = [
   { href: "/", label: "ホーム" },
   { href: "/sources", label: "メディアソース" },
+  { href: "/sports", label: "スポーツ" },
+  { href: "/economy", label: "経済" },
+  { href: "/gaming", label: "ゲーム" },
 ];
 
 interface HeaderProps {
