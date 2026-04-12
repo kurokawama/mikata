@@ -40,3 +40,11 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 .env.local
+
+# V13 Secret Management
+.env.automation
+.env.hq
+.env.agents
+.env.tools
+secrets/
+.claude/plans/

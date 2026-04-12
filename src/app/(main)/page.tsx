@@ -37,9 +37,9 @@ export default async function HomePage() {
               <Button
                 size="lg"
                 className="bg-amber-500 text-navy-900 hover:bg-amber-400 font-semibold"
-                render={<Link href="/signup" />}
+                render={<a href="#latest-articles" />}
               >
-                3ヶ月無料で始める
+                記事を読む
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
               <Button
@@ -108,8 +108,8 @@ export default async function HomePage() {
       </section>
 
       {/* Latest Articles */}
-      {typedArticles.length > 0 && (
-        <section className="bg-secondary/50 py-16 lg:py-24">
+      {(
+        <section id="latest-articles" className="bg-secondary/50 py-16 lg:py-24">
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
             <div className="flex items-center justify-between">
               <h2 className="font-heading text-3xl font-bold text-primary">
@@ -123,7 +123,24 @@ export default async function HomePage() {
               </Link>
             </div>
             <div className="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-              {typedArticles.map((article) => (
+              {typedArticles.length === 0 && (
+              <div className="col-span-full py-16 text-center">
+                <p className="text-lg font-medium text-muted-foreground">
+                  記事を準備中です
+                </p>
+                <p className="mt-2 text-sm text-muted-foreground">
+                  世界中のメディアソースからニュースを収集して���ます。まもなく記事が配信されます。
+                </p>
+                <Button
+                  variant="outline"
+                  className="mt-6"
+                  render={<Link href="/sources" />}
+                >
+                  メディアソース一覧を見る
+                </Button>
+              </div>
+            )}
+            {typedArticles.map((article) => (
                 <Link key={article.id} href={`/article/${article.id}`}>
                   <Card className="group h-full transition-shadow hover:shadow-lg">
                     <CardHeader className="pb-3">
@@ -163,17 +180,17 @@ export default async function HomePage() {
       <section className="py-16 lg:py-24">
         <div className="mx-auto max-w-3xl px-4 text-center sm:px-6 lg:px-8">
           <h2 className="font-heading text-3xl font-bold text-primary">
-            今すぐ多視点ニュースを体験
+            もっと深く、もっと広く
           </h2>
           <p className="mt-4 text-muted-foreground">
-            3ヶ月間無料でお試しいただけます。クレジットカード不要。
+            無料登録で全ての記事が読み放題。3ヶ月間無料、クレジットカード不要。
           </p>
           <Button
             size="lg"
             className="mt-8 bg-amber-500 text-navy-900 hover:bg-amber-400 font-semibold"
             render={<Link href="/signup" />}
           >
-            無料トライアルを開始
+            無料登録して全記事を読む
             <ArrowRight className="ml-2 h-4 w-4" />
           </Button>
         </div>
