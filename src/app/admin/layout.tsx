@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { cookies } from "next/headers";
 import { Newspaper, Radio, Megaphone, Settings, Home } from "lucide-react";
 import { getUser, getProfile } from "@/lib/supabase/server";
+import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 
 const adminNav = [
   { href: "/admin", label: "ダッシュボード", icon: Home },
@@ -23,9 +24,25 @@ export default async function AdminLayout({
   const profile = await getProfile();
   if (profile?.role !== "admin") redirect("/");
 
-  // TOTP verification check
-  const cookieStore = await cookies();
-  const totpVerified = cookieStore.get("admin_totp_verified")?.value;
+  // Check if admin has TOTP configured
+  const serviceClient = createSupabaseClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  );
+  const { data: totpSecret } = await serviceClient
+    .from("admin_totp_secrets")
+    .select("user_id")
+    .eq("user_id", user.id)
+    .single();
+
+  // If TOTP is configured, verify the session cookie
+  if (totpSecret) {
+    const cookieStore = await cookies();
+    const totpVerified = cookieStore.get("admin_totp_verified")?.value;
+    if (!totpVerified) {
+      redirect("/admin-totp");
+    }
+  }
 
   return (
     <div className="flex min-h-screen">

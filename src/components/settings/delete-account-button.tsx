@@ -16,7 +16,7 @@ export function DeleteAccountButton() {
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     if (confirmText !== CONFIRM_PHRASE) {
-      setError(`"" と入力してください`);
+      setError(`"${CONFIRM_PHRASE}" と入力してください`);
       return;
     }
     setIsPending(true);

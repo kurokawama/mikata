@@ -1,6 +1,7 @@
+"use client";
+
 import { Card, CardContent } from "@/components/ui/card";
 import { Clock, AlertTriangle } from "lucide-react";
-import Link from "next/link";
 import { Button } from "@/components/ui/button";
 
 interface FreeTrialCountdownProps {
@@ -15,6 +16,16 @@ export function FreeTrialCountdown({ daysRemaining, trialEndDate }: FreeTrialCou
     month: "long",
     day: "numeric",
   });
+
+  const handleSubscribe = async () => {
+    try {
+      const res = await fetch("/api/checkout", { method: "POST" });
+      const data = await res.json();
+      if (data.url) window.location.href = data.url;
+    } catch {
+      // ignore
+    }
+  };
 
   return (
     <Card className={isUrgent ? "border-amber-400 bg-amber-50" : "border-blue-200 bg-blue-50"}>
@@ -34,7 +45,7 @@ export function FreeTrialCountdown({ daysRemaining, trialEndDate }: FreeTrialCou
           <Button
             size="sm"
             className="mt-3 bg-amber-500 text-white hover:bg-amber-400 text-xs h-7"
-            render={<Link href="/subscribe" />}
+            onClick={handleSubscribe}
           >
             プレミアムプランに登録する
           </Button>
