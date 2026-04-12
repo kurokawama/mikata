@@ -89,11 +89,11 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
 
   const today = new Date().toISOString().split("T")[0];
   const isNewDay = profile?.last_article_date !== today;
+  // is_premium=true articles require subscription; is_premium=false are free (up to daily limit)
+  const isPremiumOnly = typedArticle.is_premium === true;
   const canView =
     isSubscribed ||
-    !profile ||
-    isNewDay ||
-    (profile.daily_article_count < 1);
+    (!isPremiumOnly && (!profile || isNewDay || profile.daily_article_count < 1));
 
   // Update view count server-side
   if (profile && canView) {

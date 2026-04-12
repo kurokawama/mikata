@@ -1,52 +1,34 @@
-const CACHE_NAME = "mikata-v1";
-const OFFLINE_URL = "/offline";
+// MIKATA Service Worker - Push Notifications
+self.addEventListener("push", (event) => {
+  if (!event.data) return;
 
-const PRECACHE_URLS = ["/", "/manifest.json"];
+  const data = event.data.json();
+  const options = {
+    body: data.body,
+    icon: data.icon || "/icon-192.png",
+    badge: data.badge || "/icon-192.png",
+    data: { url: data.url || "/" },
+    vibrate: [200, 100, 200],
+  };
 
-self.addEventListener("install", (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => cache.addAll(PRECACHE_URLS))
+    self.registration.showNotification(data.title, options)
   );
-  self.skipWaiting();
 });
 
-self.addEventListener("activate", (event) => {
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+  const url = event.notification.data?.url || "/";
   event.waitUntil(
-    caches.keys().then((keys) =>
-      Promise.all(
-        keys
-          .filter((key) => key !== CACHE_NAME)
-          .map((key) => caches.delete(key))
-      )
-    )
-  );
-  self.clients.claim();
-});
-
-self.addEventListener("fetch", (event) => {
-  if (event.request.mode === "navigate") {
-    event.respondWith(
-      fetch(event.request).catch(() =>
-        caches.match(OFFLINE_URL).then((response) => response || caches.match("/"))
-      )
-    );
-    return;
-  }
-
-  event.respondWith(
-    caches.match(event.request).then((cached) => {
-      if (cached) return cached;
-      return fetch(event.request).then((response) => {
-        if (
-          response.status === 200 &&
-          response.type === "basic" &&
-          event.request.url.match(/\.(js|css|png|jpg|svg|woff2?)$/)
-        ) {
-          const clone = response.clone();
-          caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
+    clients.matchAll({ type: "window", includeUncontrolled: true }).then((clientList) => {
+      for (const client of clientList) {
+        if (client.url.includes(self.location.origin) && "focus" in client) {
+          return client.focus();
         }
-        return response;
-      });
+      }
+      if (clients.openWindow) {
+        return clients.openWindow(url);
+      }
     })
   );
 });

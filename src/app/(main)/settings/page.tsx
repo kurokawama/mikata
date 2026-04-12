@@ -4,6 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { getUser, getProfile } from "@/lib/supabase/server";
 import { FreeTrialCountdown } from "@/components/settings/free-trial-countdown";
 import { DeleteAccountButton } from "@/components/settings/delete-account-button";
+import { PushNotificationButton } from "@/components/settings/push-notification-button";
 
 export default async function SettingsPage() {
   const user = await getUser();
@@ -63,6 +64,15 @@ export default async function SettingsPage() {
               </label>
               <p className="text-foreground">{user.email}</p>
             </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>通知設定</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <PushNotificationButton />
           </CardContent>
         </Card>
 

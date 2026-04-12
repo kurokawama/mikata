@@ -31,6 +31,7 @@ export interface Article {
   country_code: string;
   published_at: string;
   status: ArticleStatus;
+  is_premium: boolean;
   created_at: string;
   image_url: string | null;
 }
