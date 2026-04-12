@@ -10,6 +10,7 @@ import { getProfile } from "@/lib/supabase/server";
 import { NewsArticleJsonLd } from "@/components/seo/json-ld";
 import { ArticlePerspectives } from "@/components/articles/article-perspectives";
 import { BookmarkButton } from "@/components/articles/bookmark-button";
+import { ShareButtons } from "@/components/articles/share-buttons";
 import type { Metadata } from "next";
 import type { ArticleWithSource, ArticlePerspectiveWithSource } from "@/types/database";
 
@@ -134,6 +135,10 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
         {profile && (
           <BookmarkButton articleId={id} initialBookmarked={isBookmarked} />
         )}
+        <ShareButtons
+          title={typedArticle.title}
+          url={process.env.NEXT_PUBLIC_SITE_URL ? process.env.NEXT_PUBLIC_SITE_URL + "/article/" + id : "https://mikata.vercel.app/article/" + id}
+        />
       </div>
 
       <article>
@@ -182,23 +187,37 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
             </div>
           </div>
         ) : (
-          <div className="relative">
-            <div className="line-clamp-3 text-foreground leading-relaxed blur-sm select-none">
-              {typedArticle.content}
+          <div className="relative overflow-hidden">
+            {/* Show ~70% of content then fade out */}
+            <div className="relative max-h-[420px] overflow-hidden">
+              <div className="whitespace-pre-wrap text-foreground leading-relaxed">
+                {typedArticle.content}
+              </div>
+              {/* Gradient overlay: fades content at bottom */}
+              <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-background" style={{top: '55%'}} />
             </div>
-            <div className="mt-4 rounded-lg border border-amber-200 bg-amber-50 p-8 text-center">
-              <h3 className="text-xl font-bold text-primary">
-                本日の無料記事は上限に達しました
+            {/* Paywall CTA */}
+            <div className="relative mt-0 rounded-b-lg border border-amber-200 bg-gradient-to-b from-amber-50/80 to-amber-50 px-8 py-10 text-center backdrop-blur-sm">
+              <div className="mb-3 inline-flex items-center justify-center rounded-full bg-amber-100 px-3 py-1 text-xs font-medium text-amber-700">
+                プレミアム記事
+              </div>
+              <h3 className="text-xl font-bold text-gray-900">
+                続きを読むにはプレミアムプランへ
               </h3>
-              <p className="mt-2 text-muted-foreground">
-                プレミアムプランに登録すると、すべての記事を無制限に閲覧できます
+              <p className="mt-2 text-sm text-muted-foreground">
+                3ヶ月間無料・全記事読み放題・広告なし
               </p>
-              <Button
-                className="mt-4 bg-amber-500 text-navy-900 hover:bg-amber-400"
-                render={<Link href="/signup" />}
-              >
-                3ヶ月無料で始める
-              </Button>
+              <div className="mt-5 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
+                <Button
+                  className="bg-amber-500 px-8 text-white hover:bg-amber-400"
+                  render={<Link href="/signup" />}
+                >
+                  3ヶ月無料で始める
+                </Button>
+                <Button variant="ghost" className="text-sm text-muted-foreground" render={<Link href="/login" />}>
+                  ログイン
+                </Button>
+              </div>
             </div>
           </div>
         )}

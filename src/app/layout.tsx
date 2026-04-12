@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import { CookieConsentBanner } from "@/components/cookie-consent-banner";
 import { Newsreader, Work_Sans, Noto_Sans_JP } from "next/font/google";
 import { ServiceWorkerRegister } from "@/components/pwa/sw-register";
 import { OrganizationJsonLd } from "@/components/seo/json-ld";
@@ -53,6 +54,7 @@ export default function RootLayout({
         <OrganizationJsonLd siteUrl={process.env.NEXT_PUBLIC_SITE_URL ?? "https://mikata.news"} />
         {children}
         <ServiceWorkerRegister />
+        <CookieConsentBanner />
       </body>
     </html>
   );

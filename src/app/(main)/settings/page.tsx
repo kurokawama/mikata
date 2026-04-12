@@ -2,6 +2,8 @@ import { redirect } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { getUser, getProfile } from "@/lib/supabase/server";
+import { FreeTrialCountdown } from "@/components/settings/free-trial-countdown";
+import { DeleteAccountButton } from "@/components/settings/delete-account-button";
 
 export default async function SettingsPage() {
   const user = await getUser();
@@ -18,6 +20,18 @@ export default async function SettingsPage() {
     incomplete: "未完了",
   };
 
+  // Free trial countdown: 91 days from registration
+  const createdAt = new Date(profile.created_at);
+  const trialEndDate = new Date(createdAt.getTime() + 91 * 24 * 60 * 60 * 1000);
+  const now = new Date();
+  const daysRemaining = Math.ceil(
+    (trialEndDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
+  );
+  const showCountdown =
+    daysRemaining > 0 &&
+    daysRemaining <= 30 &&
+    !profile.subscription_status;
+
   return (
     <div className="mx-auto max-w-3xl px-4 py-8 sm:px-6 lg:px-8">
       <h1 className="font-heading text-3xl font-bold text-primary mb-8">
@@ -25,6 +39,13 @@ export default async function SettingsPage() {
       </h1>
 
       <div className="space-y-6">
+        {showCountdown && (
+          <FreeTrialCountdown
+            daysRemaining={daysRemaining}
+            trialEndDate={trialEndDate.toISOString()}
+          />
+        )}
+
         <Card>
           <CardHeader>
             <CardTitle>プロフィール</CardTitle>
@@ -63,7 +84,8 @@ export default async function SettingsPage() {
                 }
               >
                 {profile.subscription_status
-                  ? subscriptionLabels[profile.subscription_status] ?? profile.subscription_status
+                  ? subscriptionLabels[profile.subscription_status] ??
+                    profile.subscription_status
                   : "未登録"}
               </Badge>
             </div>
@@ -82,14 +104,25 @@ export default async function SettingsPage() {
                 本日の閲覧数
               </label>
               <p className="text-foreground">
-                {profile.daily_article_count} / {
-                  profile.subscription_status === "active" ||
-                  profile.subscription_status === "trialing"
-                    ? "無制限"
-                    : "1"
-                }
+                {profile.daily_article_count} /{" "}
+                {profile.subscription_status === "active" ||
+                profile.subscription_status === "trialing"
+                  ? "無制限"
+                  : "1"}
               </p>
             </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border-destructive/30">
+          <CardHeader>
+            <CardTitle className="text-destructive">アカウント削除</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-muted-foreground mb-4">
+              アカウントを削除すると、すべてのデータが完全に削除され、元に戻すことはできません。
+            </p>
+            <DeleteAccountButton />
           </CardContent>
         </Card>
       </div>
