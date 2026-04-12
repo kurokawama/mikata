@@ -5,6 +5,7 @@ import { getUser, getProfile } from "@/lib/supabase/server";
 import { FreeTrialCountdown } from "@/components/settings/free-trial-countdown";
 import { DeleteAccountButton } from "@/components/settings/delete-account-button";
 import { PushNotificationButton } from "@/components/settings/push-notification-button";
+import { ReadingHistory } from "@/components/settings/reading-history";
 
 export default async function SettingsPage() {
   const user = await getUser();
@@ -12,6 +13,20 @@ export default async function SettingsPage() {
 
   const profile = await getProfile();
   if (!profile) redirect("/login");
+
+  // Fetch reading history (last 20 items)
+  const supabase = await import("@/lib/supabase/server").then(m => m.createClient());
+  const { data: historyItemsRaw } = await (await supabase)
+    .from("reading_history")
+    .select("article_id, read_at, articles(title, genre)")
+    .eq("user_id", profile.id)
+    .order("read_at", { ascending: false })
+    .limit(20);
+  const historyItems = (historyItemsRaw ?? []).map((item) => ({
+    article_id: item.article_id,
+    read_at: item.read_at,
+    articles: Array.isArray(item.articles) ? (item.articles[0] ?? null) : item.articles,
+  }));
 
   const subscriptionLabels: Record<string, string> = {
     active: "有効",
@@ -121,6 +136,15 @@ export default async function SettingsPage() {
                   : "1"}
               </p>
             </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>閲覧履歴</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ReadingHistory items={historyItems ?? []} />
           </CardContent>
         </Card>
 

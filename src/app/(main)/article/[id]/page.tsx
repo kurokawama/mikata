@@ -105,6 +105,9 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
         last_article_date: today,
       })
       .eq("id", profile.id);
+    await supabase
+      .from("reading_history")
+      .upsert({ user_id: profile.id, article_id: id }, { onConflict: "user_id,article_id" });
   }
 
   // Check bookmark status

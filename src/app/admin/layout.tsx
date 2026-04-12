@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { cookies } from "next/headers";
 import { Newspaper, Radio, Megaphone, Settings, Home } from "lucide-react";
 import { getUser, getProfile } from "@/lib/supabase/server";
 
@@ -21,6 +22,10 @@ export default async function AdminLayout({
 
   const profile = await getProfile();
   if (profile?.role !== "admin") redirect("/");
+
+  // TOTP verification check
+  const cookieStore = await cookies();
+  const totpVerified = cookieStore.get("admin_totp_verified")?.value;
 
   return (
     <div className="flex min-h-screen">
