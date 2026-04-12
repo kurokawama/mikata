@@ -2,7 +2,9 @@ import type { MetadataRoute } from "next";
 import { createClient } from "@supabase/supabase-js";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://mikata.news";
+  // Sanitize SITE_URL: trim whitespace/newlines that can appear in env vars
+  const rawUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://mikata.news";
+  const siteUrl = rawUrl.trim().replace(/\n/g, "").replace(/\r/g, "");
 
   const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
