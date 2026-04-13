@@ -3,25 +3,16 @@ import { z } from 'zod/v4'
 import { getUser, createClient } from '@/lib/supabase/server'
 import { getStripe, getMonthlyPriceId, getAnnualPriceId } from '@/lib/stripe'
 
-const checkoutSchema = z.object({
-  plan: z.enum(['monthly', 'annual']),
-})
+const planSchema = z.enum(['monthly', 'yearly', 'annual'])
 
-export async function POST(request: NextRequest) {
+async function createCheckoutSession(request: NextRequest, plan: 'monthly' | 'annual') {
   const user = await getUser()
   if (!user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    return null
   }
 
-  const body = await request.json()
-  const result = checkoutSchema.safeParse(body)
-  if (!result.success) {
-    return NextResponse.json({ error: 'Invalid plan' }, { status: 400 })
-  }
+  const priceId = plan === 'monthly' ? getMonthlyPriceId() : getAnnualPriceId()
 
-  const priceId = result.data.plan === 'monthly' ? getMonthlyPriceId() : getAnnualPriceId()
-
-  // Check if user already has a stripe_customer_id
   const supabase = await createClient()
   const { data: profile } = await supabase
     .from('profiles')
@@ -32,7 +23,6 @@ export async function POST(request: NextRequest) {
   const stripe = getStripe()
   let customerId = profile?.stripe_customer_id
 
-  // Create Stripe customer if none exists
   if (!customerId) {
     const customer = await stripe.customers.create({
       email: profile?.email ?? user.email,
@@ -40,7 +30,6 @@ export async function POST(request: NextRequest) {
     })
     customerId = customer.id
 
-    // Persist stripe_customer_id to profile immediately
     await supabase
       .from('profiles')
       .update({ stripe_customer_id: customerId })
@@ -61,5 +50,58 @@ export async function POST(request: NextRequest) {
     },
   })
 
-  return NextResponse.json({ url: session.url })
+  return session
+}
+
+// GET handler: used by pricing-cards.tsx <a href="/api/checkout?plan=...">
+export async function GET(request: NextRequest) {
+  const { searchParams } = request.nextUrl
+  const rawPlan = searchParams.get('plan')
+
+  const planResult = planSchema.safeParse(rawPlan)
+  if (!planResult.success) {
+    return NextResponse.redirect(new URL('/subscribe', request.url))
+  }
+
+  // Normalize 'yearly' → 'annual'
+  const plan = planResult.data === 'yearly' ? 'annual' : planResult.data
+
+  const user = await getUser()
+  if (!user) {
+    return NextResponse.redirect(new URL(`/login?redirect=/subscribe`, request.url))
+  }
+
+  try {
+    const session = await createCheckoutSession(request, plan)
+    if (!session?.url) {
+      return NextResponse.redirect(new URL('/subscribe?error=checkout', request.url))
+    }
+    return NextResponse.redirect(session.url)
+  } catch {
+    return NextResponse.redirect(new URL('/subscribe?error=checkout', request.url))
+  }
+}
+
+// POST handler: kept for API compatibility
+export async function POST(request: NextRequest) {
+  const user = await getUser()
+  if (!user) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
+  const body = await request.json()
+  const result = z.object({ plan: z.enum(['monthly', 'annual']) }).safeParse(body)
+  if (!result.success) {
+    return NextResponse.json({ error: 'Invalid plan' }, { status: 400 })
+  }
+
+  try {
+    const session = await createCheckoutSession(request, result.data.plan)
+    if (!session?.url) {
+      return NextResponse.json({ error: 'Failed to create session' }, { status: 500 })
+    }
+    return NextResponse.json({ url: session.url })
+  } catch {
+    return NextResponse.json({ error: 'Failed to create checkout session' }, { status: 500 })
+  }
 }
