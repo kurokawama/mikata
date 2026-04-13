@@ -1,8 +1,9 @@
 'use client'
 
-import { use, useActionState } from 'react'
-import { login } from './actions'
+import { use, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { createClient } from '@/lib/supabase/client'
 
 export function LoginForm({
   searchParams,
@@ -10,20 +11,48 @@ export function LoginForm({
   searchParams: Promise<{ redirect?: string }>
 }) {
   const { redirect } = use(searchParams)
-  const [state, formAction, pending] = useActionState(
-    async (_prev: { error: string } | null, formData: FormData) => {
-      return login(formData)
-    },
-    null,
-  )
+  const router = useRouter()
+  const [error, setError] = useState<string | null>(null)
+  const [pending, setPending] = useState(false)
+
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault()
+    setPending(true)
+    setError(null)
+
+    const form = e.currentTarget
+    const email = (form.elements.namedItem('email') as HTMLInputElement).value
+    const password = (form.elements.namedItem('password') as HTMLInputElement).value
+
+    if (!email || !password || password.length < 8) {
+      setError('メールアドレスとパスワード（8文字以上）を入力してください')
+      setPending(false)
+      return
+    }
+
+    const supabase = createClient()
+    const { error: authError } = await supabase.auth.signInWithPassword({ email, password })
+
+    if (authError) {
+      if (authError.message.includes('Email not confirmed')) {
+        setError('メールアドレスが未確認です。確認メールをご確認ください')
+      } else {
+        setError('メールアドレスまたはパスワードが正しくありません')
+      }
+      setPending(false)
+      return
+    }
+
+    // ブラウザクライアントがクッキーを設定済み → router.refreshでサーバー側に同期
+    router.push(redirect || '/')
+    router.refresh()
+  }
 
   return (
-    <form action={formAction} className="space-y-4">
-      {redirect && <input type="hidden" name="redirect" value={redirect} />}
-
-      {state?.error && (
+    <form onSubmit={handleSubmit} className="space-y-4">
+      {error && (
         <div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">
-          {state.error}
+          {error}
         </div>
       )}
 

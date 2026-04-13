@@ -1,8 +1,9 @@
 /* v0-generated — adapted from components/generated/articledetail */
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
+import { createClient } from '@/lib/supabase/client'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
@@ -25,6 +26,38 @@ function SentimentIcon({ label }: { label: SentimentLabel }) {
 export function ArticleDetail({ article }: { article: Article }) {
   const [isLiked, setIsLiked] = useState(false)
   const [isBookmarked, setIsBookmarked] = useState(false)
+  const [isPremium, setIsPremium] = useState<boolean | null>(null) // null = まだ確認中
+
+  useEffect(() => {
+    const supabase = createClient()
+    supabase.auth.getUser().then(async ({ data: { user } }) => {
+      if (!user) {
+        setIsPremium(false)
+        return
+      }
+      const { data } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', user.id)
+        .single()
+      setIsPremium(data?.role === 'premium_user')
+    })
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      if (!session?.user) {
+        setIsPremium(false)
+        return
+      }
+      const { data } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', session.user.id)
+        .single()
+      setIsPremium(data?.role === 'premium_user')
+    })
+
+    return () => subscription.unsubscribe()
+  }, [])
 
   const dateStr = article.published_at
     ? new Date(article.published_at).toLocaleDateString('ja-JP', {
@@ -127,20 +160,22 @@ export function ArticleDetail({ article }: { article: Article }) {
         </section>
       )}
 
-      {/* Subscribe CTA for non-premium */}
-      <section className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pb-12">
-        <div className="bg-[#16213E] rounded-2xl p-8 text-center">
-          <h3 className="text-2xl font-bold text-white font-serif mb-3">
-            もっと深く読み解く
-          </h3>
-          <p className="text-[#9CA3AF] mb-6">
-            プレミアム会員なら全記事・全視点が読み放題
-          </p>
-          <Button asChild className="bg-[#F59E0B] hover:bg-[#D97706] text-black font-semibold px-8">
-            <Link href="/subscribe">プレミアムに登録</Link>
-          </Button>
-        </div>
-      </section>
+      {/* Subscribe CTA: プレミアム会員には非表示 */}
+      {isPremium === false && (
+        <section className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pb-12">
+          <div className="bg-[#16213E] rounded-2xl p-8 text-center">
+            <h3 className="text-2xl font-bold text-white font-serif mb-3">
+              もっと深く読み解く
+            </h3>
+            <p className="text-[#9CA3AF] mb-6">
+              プレミアム会員なら全記事・全視点が読み放題
+            </p>
+            <Button asChild className="bg-[#F59E0B] hover:bg-[#D97706] text-black font-semibold px-8">
+              <Link href="/subscribe">プレミアムに登録</Link>
+            </Button>
+          </div>
+        </section>
+      )}
     </>
   )
 }
