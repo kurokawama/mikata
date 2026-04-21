@@ -1,0 +1,81 @@
+rules:
+  - id: mk-ai-empty-catch-block
+    message: >
+      空のcatchブロック検出。エラーを黙殺するとバグ調査が困難になる。
+      最低限 logger.error / console.error / throw のいずれかを追加せよ。
+    severity: ERROR
+    languages: [typescript, javascript]
+    metadata:
+      category: security
+      owasp: "A09:2021 - Security Logging and Monitoring Failures"
+      source: "MK CLAUDE V13 Phase 3.5"
+      confidence: HIGH
+    patterns:
+      - pattern-either:
+          - pattern: |
+              try { ... } catch ($E) { }
+          - pattern: |
+              try { ... } catch { }
+          - pattern: |
+              try { ... } catch ($E) { /* ... */ }
+      - pattern-not: |
+          try { ... } catch ($E) { ... console.error(...); ... }
+      - pattern-not: |
+          try { ... } catch ($E) { ... logger.$M(...); ... }
+      - pattern-not: |
+          try { ... } catch ($E) { ... throw ...; ... }
+      - pattern-not: |
+          try { ... } catch ($E) { ... return ...; ... }
+
+  - id: mk-ai-unsafe-type-assertion
+    message: >
+      `as unknown as X` 型アサーションの濫用。型安全性を迂回するためAI生成コードで頻出。
+      まず Zod / 型ガード / discriminated union で正しく narrow せよ。
+      どうしても必要な場合は `// @ts-expect-error` + 理由コメントで明示すること。
+    severity: WARNING
+    languages: [typescript]
+    metadata:
+      category: security
+      source: "MK CLAUDE V13 Phase 3.5 / SEC-B"
+      confidence: MEDIUM
+    patterns:
+      - pattern-either:
+          - pattern: $X as unknown as $T
+          - pattern: ($X as unknown) as $T
+
+  - id: mk-ai-hardcoded-test-credentials
+    message: >
+      テスト用ハードコード認証情報検出。"test" / "password" / "secret" / "admin" 等の
+      仮クレデンシャルがコミットされそうになっている。テスト内でも fixtures / env / vault 経由で読め。
+    severity: ERROR
+    languages: [typescript, javascript, python]
+    metadata:
+      category: security
+      source: "MK CLAUDE V13 Phase 3.5 / SEC-C"
+      confidence: MEDIUM
+    pattern-either:
+      - patterns:
+          - pattern-either:
+              - pattern: $K = "password"
+              - pattern: $K = "password123"
+              - pattern: $K = "admin"
+              - pattern: $K = "adminadmin"
+              - pattern: $K = "test1234"
+              - pattern: $K = "secret"
+              - pattern: $K = "changeme"
+              - pattern: $K = "letmein"
+          - metavariable-regex:
+              metavariable: $K
+              regex: '(?i).*(password|passwd|pwd|secret|token|apikey|api_key).*'
+      - patterns:
+          - pattern-either:
+              - pattern: |
+                  { password: "password", ... }
+              - pattern: |
+                  { password: "test", ... }
+              - pattern: |
+                  { password: "admin", ... }
+              - pattern: |
+                  { apiKey: "test", ... }
+              - pattern: |
+                  { api_key: "test", ... }
