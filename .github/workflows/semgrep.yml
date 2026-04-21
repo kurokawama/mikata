@@ -27,21 +27,21 @@ jobs:
 
       - name: Run Semgrep
         run: |
-          semgrep ci \
+          semgrep scan \
             --config=p/security-audit \
             --config=p/secrets \
             --config=p/owasp-top-ten \
             --config=p/nextjs \
             --config=p/typescript \
             --config=p/react \
-            --sarif \
-            --output=semgrep-results.sarif \
-            --json \
+            --sarif-output=semgrep-results.sarif \
             --json-output=semgrep-results.json \
             --severity=ERROR \
             --severity=WARNING \
             --timeout=300 \
-            --max-memory=4000 || SEMGREP_EXIT=$?
+            --max-memory=4000 \
+            --metrics=off \
+            --no-error || true
 
           # Criticalが1件でもあれば fail
           CRITICAL=$(jq '[.results[] | select(.extra.severity == "ERROR")] | length' semgrep-results.json)
