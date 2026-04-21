@@ -1,0 +1,17 @@
+# Semgrep無視パス（誤検知抑制）
+node_modules/
+.next/
+dist/
+build/
+coverage/
+.git/
+.venv/
+__pycache__/
+.pnpm-store/
+*.min.js
+*.min.css
+public/vendor/
+tests/fixtures/
+__tests__/fixtures/
+*.lock
+*.lockb
